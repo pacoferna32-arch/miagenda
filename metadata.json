@@ -1,0 +1,6 @@
+{
+  "name": "Mi Calendario de Tareas",
+  "description": "Organizador personal integral con calendario mensual y semanal, gestión de tareas, menús, lista de la compra, medicación diaria, control de peso, finanzas y notas manuscritas con Apple Pencil.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,117 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "TaskItem": {
+      "title": "TaskItem",
+      "description": "Task, reminder, menu, or finance record belonging to a user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "userId": { "type": "string" },
+        "t": { "type": "string" },
+        "c": { "type": "string" },
+        "d": { "type": "string" },
+        "h": { "type": "string" },
+        "done": { "type": "boolean" },
+        "n": { "type": "string" }
+      },
+      "required": ["id", "userId", "t", "c", "d", "h", "done"]
+    },
+    "MedicationItem": {
+      "title": "MedicationItem",
+      "description": "Medication prescription or supplement tracker",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "userId": { "type": "string" },
+        "n": { "type": "string" },
+        "dose": { "type": "string" },
+        "h": { "type": "string" },
+        "on": { "type": "boolean" },
+        "lead": { "type": "number" }
+      },
+      "required": ["id", "userId", "n", "h", "on"]
+    },
+    "WeightItem": {
+      "title": "WeightItem",
+      "description": "Weight log entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "d": { "type": "string" },
+        "kg": { "type": "number" },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "d", "kg"]
+    },
+    "HabitItem": {
+      "title": "HabitItem",
+      "description": "Habit tracker item with history log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "emoji": { "type": "string" },
+        "color": { "type": "string" },
+        "category": { "type": "string" },
+        "frequency": { "type": "string" },
+        "history": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "emoji", "color", "frequency"]
+    },
+    "UserSettingsItem": {
+      "title": "UserSettingsItem",
+      "description": "User preferences, push notifications and language configuration",
+      "type": "object",
+      "properties": {
+        "theme": { "type": "string" },
+        "language": { "type": "string" },
+        "enableSound": { "type": "boolean" },
+        "heightCm": { "type": "number" },
+        "targetWeightKg": { "type": "number" },
+        "diaryPin": { "type": "string" },
+        "pushNotifications": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "TaskItem",
+      "description": "User specific tasks, reminders, and activities"
+    },
+    "/users/{userId}/medications/{medId}": {
+      "schema": "MedicationItem",
+      "description": "User specific medications schedule"
+    },
+    "/users/{userId}/weights/{weightId}": {
+      "schema": "WeightItem",
+      "description": "User daily weight logs"
+    },
+    "/users/{userId}/habits/{habitId}": {
+      "schema": "HabitItem",
+      "description": "User daily habit tracking records"
+    },
+    "/users/{userId}/settings/{docId}": {
+      "schema": "UserSettingsItem",
+      "description": "User settings and configuration"
+    }
+  }
+}

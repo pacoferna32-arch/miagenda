@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1c29" />
+      <stop offset="100%" stop-color="#12141f" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0664d" />
+      <stop offset="100%" stop-color="#e8533a" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background container with rounded corners -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Inner calendar card -->
+  <g filter="url(#shadow)">
+    <!-- Calendar back plate -->
+    <rect x="96" y="106" width="320" height="310" rx="40" fill="#ffffff" />
+    
+    <!-- Top header bar of calendar -->
+    <path d="M 96 146 C 96 124 114 106 136 106 L 376 106 C 398 106 416 124 416 146 L 416 186 L 96 186 Z" fill="url(#accentGrad)" />
+
+    <!-- Calendar binder rings -->
+    <rect x="160" y="80" width="24" height="48" rx="12" fill="#ffffff" stroke="#1a1c29" stroke-width="4" />
+    <rect x="328" y="80" width="24" height="48" rx="12" fill="#ffffff" stroke="#1a1c29" stroke-width="4" />
+
+    <!-- Grid / Task check lines -->
+    <!-- Day 1 task with checkmark -->
+    <circle cx="160" cy="242" r="18" fill="#e8533a" />
+    <path d="M 152 242 L 158 248 L 170 236" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <rect x="194" y="235" width="160" height="14" rx="7" fill="#1a1c29" opacity="0.85" />
+
+    <!-- Day 2 task with checkmark -->
+    <circle cx="160" cy="298" r="18" fill="#e8533a" />
+    <path d="M 152 298 L 158 304 L 170 292" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <rect x="194" y="291" width="130" height="14" rx="7" fill="#1a1c29" opacity="0.85" />
+
+    <!-- Day 3 task pending circle -->
+    <circle cx="160" cy="354" r="18" fill="#f0ece1" stroke="#e0d8cc" stroke-width="3" />
+    <rect x="194" y="347" width="175" height="14" rx="7" fill="#8a8070" opacity="0.5" />
+  </g>
+</svg>
