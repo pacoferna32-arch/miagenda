@@ -25,16 +25,18 @@ import {
   Settings,
   Crown,
   Sparkles,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { t } from '../utils/i18n';
 import { AdBanner } from './AdBanner';
+import { UserAvatar } from './UserAvatar';
 
 interface SidebarProps {
   currentCategory: CategoryKey | 'all';
   onSelectCategory: (cat: CategoryKey | 'all') => void;
-  activeView: 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits';
-  onSelectView: (view: 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits') => void;
+  activeView: 'welcome' | 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits';
+  onSelectView: (view: 'welcome' | 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits') => void;
   tasks: Task[];
   medications: Medication[];
   habitsCount?: number;
@@ -48,7 +50,6 @@ interface SidebarProps {
   onOpenIOSModal: () => void;
   onOpenAuthModal: () => void;
   onOpenSettings?: () => void;
-  onOpenChangelog?: () => void;
   onOpenSubscription?: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
@@ -72,7 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenIOSModal,
   onOpenAuthModal,
   onOpenSettings,
-  onOpenChangelog,
   onOpenSubscription,
   isOpenMobile,
   onCloseMobile,
@@ -126,12 +126,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {/* Brand / Logo */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              onSelectCategory('all');
+              onSelectView('welcome');
+              onCloseMobile();
+            }}
+            className="flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer text-left"
+            title="Ir a Inicio & Bienvenida"
+          >
             <span className="text-xl">📅</span>
             <div className="font-serif font-bold text-xl tracking-tight">
               Mis tareas<span className="text-[#e8533a]">·</span>
             </div>
-          </div>
+          </button>
           <button
             type="button"
             onClick={onCloseMobile}
@@ -147,28 +156,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => {
-                onOpenAuthModal();
+                onSelectView('welcome');
                 onCloseMobile();
               }}
               className="flex items-center gap-2.5 flex-1 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer"
-              title="Ver perfil y sincronización de cuenta"
+              title="Ir a tu Página de Bienvenida y Perfil"
             >
-              {user?.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || 'Usuario'}
-                  className="w-8 h-8 rounded-full object-cover ring-1 ring-white/20 shrink-0"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#e8533a] to-amber-500 flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-xs">
-                  {(user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}
-                </div>
-              )}
+              <UserAvatar
+                avatar={settings.userAvatar || user?.photoURL || undefined}
+                avatarType={settings.userAvatar ? settings.userAvatarType : (user?.photoURL ? 'upload' : 'preset')}
+                userName={settings.userName || user?.displayName || user?.email?.split('@')[0] || 'Mi Cuenta'}
+                size="sm"
+                className="ring-1 ring-white/20"
+              />
 
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-white truncate">
-                  {user?.displayName || user?.email?.split('@')[0] || 'Mi Cuenta'}
+                  {settings.userName || user?.displayName || user?.email?.split('@')[0] || 'Mi Cuenta'}
                 </p>
                 {user?.email && (
                   <p className="text-[10px] text-white/60 truncate font-mono">
@@ -241,6 +245,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Vistas Principales
             </h4>
             <div className="space-y-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectCategory('all');
+                  onSelectView('welcome');
+                  onCloseMobile();
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeView === 'welcome' && currentCategory === 'all'
+                    ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 shrink-0 text-amber-300" />
+                <span className="flex-1 text-left">Inicio & Bienvenida</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
@@ -456,23 +477,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               )}
 
-              {/* Changelog (v2.5.0) Quick Access */}
-              {onOpenChangelog && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenChangelog();
-                    onCloseMobile();
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#e8533a]/15 hover:bg-[#e8533a]/25 border border-[#e8533a]/30 text-amber-200 transition-colors cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
-                  <span className="flex-1 text-left">Novedades (Changelog)</span>
-                  <span className="text-[10px] bg-[#e8533a] text-white px-1.5 py-0.5 rounded font-mono font-bold">
-                    v2.5.0
-                  </span>
-                </button>
-              )}
+
 
               <button
                 type="button"

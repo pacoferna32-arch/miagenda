@@ -82,6 +82,17 @@ export interface WeightEntry {
 
 export type AppLanguage = 'es' | 'en' | 'fr' | 'de' | 'it' | 'pt' | 'ca' | 'gl' | 'eu';
 
+export interface WebPushSubscriptionData {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  expirationTime?: number | null;
+  userAgent?: string;
+  createdAt?: string;
+}
+
 export interface PushNotificationSettings {
   enabled: boolean;
   taskRemindersEnabled: boolean;
@@ -97,6 +108,8 @@ export interface PushNotificationSettings {
   quietHoursEnd: string; // "07:00"
   soundEnabled: boolean;
   vibrate: boolean;
+  activeDays?: 'all' | 'weekdays';
+  subscription?: WebPushSubscriptionData;
 }
 
 export interface PremiumSubscription {
@@ -118,6 +131,10 @@ export interface UserSettings {
   language?: AppLanguage;
   pushNotifications?: PushNotificationSettings;
   premium?: PremiumSubscription;
+  userName?: string;
+  userAvatar?: string;
+  userAvatarType?: 'upload' | 'preset' | 'emoji';
+  showWelcomeOnStartup?: boolean;
 }
 
 export interface TabAttachment {

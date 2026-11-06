@@ -7,8 +7,13 @@ import {
   getNotificationPermissionStatus,
   requestNotificationPermission,
   sendTestPushNotification,
+  subscribeToPushService,
+  unsubscribeFromPushService,
+  getExistingPushSubscription,
+  WebPushSubscriptionData,
   PushPermissionStatus,
 } from '../utils/pushNotifications';
+import { useAuth } from '../context/AuthContext';
 import { sounds } from '../utils/audio';
 import {
   X,
@@ -31,7 +36,19 @@ import {
   RotateCcw,
   Sparkles,
   Info,
+  Radio,
+  Copy,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
+  Key,
+  User,
+  Camera,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
+import { PRESET_AVATARS, getTimeGreeting } from '../utils/motivationalQuotes';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -42,7 +59,8 @@ interface UserSettingsModalProps {
   onImportBackup?: (jsonStr: string) => void;
   onResetData?: () => void;
   onOpenPinModal?: () => void;
-  initialTab?: 'push' | 'language' | 'general' | 'security' | 'changelog';
+  initialTab?: 'profile' | 'push' | 'language' | 'general' | 'security';
+  onOpenWelcomeView?: () => void;
 }
 
 export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
@@ -55,90 +73,17 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   onResetData,
   onOpenPinModal,
   initialTab,
+  onOpenWelcomeView,
 }) => {
   const currentLang = settings.language || 'es';
-  const [activeTab, setActiveTab] = useState<'push' | 'language' | 'general' | 'security' | 'changelog'>(
-    initialTab || 'push'
+  const [activeTab, setActiveTab] = useState<'profile' | 'push' | 'language' | 'general' | 'security'>(
+    initialTab || 'profile'
   );
   const [confirmReset, setConfirmReset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
-  const CHANGELOG_RELEASES = [
-    {
-      version: 'v2.5.0',
-      date: 'Noviembre 2026',
-      badge: 'Actual',
-      title: 'Modo Enfoque, Eliminación Rápida con Deshacer y Registro de Cambios',
-      items: [
-        'Registro de cambios (Changelog) integrado dentro del menú de Ajustes para consultar todas las novedades y mejoras implementadas desde el inicio.',
-        'Filtro inteligente en la Vista de Lista para alternar entre tareas Pendientes (Activas), Completadas y Prioritarias con barra de progreso en tiempo real.',
-        'Eliminación directa en 1 clic desde cualquier vista del calendario (Mes, Semana, Día y Lista) sin bloqueos de confirmación.',
-        'Notificación flotante con botón "Deshacer" al eliminar una tarea programada para restaurarla al instante si se borró por error.',
-      ],
-    },
-    {
-      version: 'v2.4.0',
-      date: 'Noviembre 2026',
-      badge: 'Mejora',
-      title: 'Gráfico de Tendencia de Peso y Despliegue Android APK / iOS PWA',
-      items: [
-        'Visualización interactiva con Recharts en Control de Peso para seguir la curva de evolución mensual comparada con tu meta de peso.',
-        'Asistente técnico integrado con comandos de Capacitor y pasos de Android Studio para empaquetar la web app en un archivo APK instalable.',
-        'Guía paso a paso para añadir la aplicación a la pantalla de inicio en iOS (iPhone y iPad) desde Safari.',
-      ],
-    },
-    {
-      version: 'v2.3.0',
-      date: 'Noviembre 2026',
-      badge: 'PRO',
-      title: 'Suscripción Vitalicia de Pago Único y Multidivisa',
-      items: [
-        'Suscripción de pago único (4,99 €) para desbloquear todas las herramientas de la aplicación y eliminar la publicidad para siempre.',
-        'Conversión automática al tipo de cambio diario en 8 monedas (EUR, USD, GBP, MXN, COP, ARS, CLP, PEN) con pago por tarjeta o transferencia bancaria.',
-      ],
-    },
-    {
-      version: 'v2.2.0',
-      date: 'Octubre 2026',
-      badge: 'Sistema',
-      title: 'Notificaciones Web Push y Soporte Multi-idioma',
-      items: [
-        'Panel de configuración Web Push con recordatorios personalizados para tareas y medicamentos, resumen matutino, revisión nocturna y modo No Molestar.',
-        'Cambio de idioma instantáneo en toda la interfaz (Español, Inglés, Francés, Alemán, Portugués, Italiano, Catalán, Gallego y Euskera).',
-      ],
-    },
-    {
-      version: 'v2.1.0',
-      date: 'Octubre 2026',
-      badge: 'Funciones',
-      title: 'Diario Personal con PIN, Habit Tracker y Previsión Meteorológica',
-      items: [
-        'Diario Personal protegido con clave de seguridad de 4 dígitos, estados de ánimo, fotos, notas de voz y dibujo a mano alzada.',
-        'Seguimiento de hábitos diarios (Habit Tracker) con rachas, plantillas recomendadas y calendario semanal.',
-        'Widget meteorológico en vivo y banner semanal del tiempo para todas las capitales de provincia e islas de España y ciudades del mundo.',
-      ],
-    },
-    {
-      version: 'v2.0.0',
-      date: 'Septiembre 2026',
-      badge: 'Nube',
-      title: 'Sincronización en la Nube en Tiempo Real y Notas Multimedia',
-      items: [
-        'Sincronización multi-dispositivo en tiempo real con Firebase Auth (Google, Apple y correo electrónico) y Cloud Firestore.',
-        'Sección de Notas y Archivos multimedia independiente para cada pestaña (grabadora de voz con transcripción, pizarra de dibujo, enlaces y archivos PDF/imágenes).',
-      ],
-    },
-    {
-      version: 'v1.0.0',
-      date: 'Agosto 2026',
-      badge: 'Lanzamiento',
-      title: 'Lanzamiento Inicial de Mi Calendario de Tareas',
-      items: [
-        'Calendario interactivo con vistas de Mes, Semana, Día y Lista organizadas en 10 categorías especializadas.',
-        'Planificador de Menús Semanales con exportación de ingredientes a la Lista de Compras, Control de Medicación Diaria, Control de Peso con IMC y Finanzas y Balance mensual.',
-      ],
-    },
-  ];
+  const { user } = useAuth();
 
   // Push notifications state
   const pushSettings: PushNotificationSettings = settings.pushNotifications || DEFAULT_PUSH_SETTINGS;
@@ -146,6 +91,10 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   const [isSupported, setIsSupported] = useState<boolean>(true);
   const [isTestingPush, setIsTestingPush] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+  const [activeSubscription, setActiveSubscription] = useState<WebPushSubscriptionData | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState<boolean>(false);
+  const [showSubscriptionDetails, setShowSubscriptionDetails] = useState<boolean>(false);
+  const [copiedSub, setCopiedSub] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -156,6 +105,13 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       setIsSupported(supported);
       setPermStatus(getNotificationPermissionStatus());
       setTestResult(null);
+
+      // Fetch active Web Push subscription from PushManager / localStorage
+      getExistingPushSubscription().then((sub) => {
+        setActiveSubscription(sub);
+      }).catch((err) => {
+        console.warn('Error fetching existing push subscription:', err);
+      });
     }
   }, [isOpen, initialTab]);
 
@@ -175,6 +131,70 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     if (result === 'granted') {
       updatePush({ enabled: true });
       sounds.playSuccessChime();
+    }
+  };
+
+  const handleSubscribePushService = async () => {
+    setIsSubscribing(true);
+    setTestResult(null);
+    try {
+      const sub = await subscribeToPushService(user?.uid);
+      if (sub) {
+        setActiveSubscription(sub);
+        updatePush({ enabled: true, subscription: sub });
+        setPermStatus(getNotificationPermissionStatus());
+        sounds.playSuccessChime();
+        setTestResult({
+          success: true,
+          msg: '¡Suscripción Web Push activada con éxito para recordatorios diarios de tareas!',
+        });
+      } else {
+        setPermStatus(getNotificationPermissionStatus());
+        setTestResult({
+          success: false,
+          msg: 'No se pudo completar la suscripción. Verifica que diste permiso a las notificaciones.',
+        });
+      }
+    } catch (e: any) {
+      setTestResult({
+        success: false,
+        msg: e?.message || 'Error al suscribirse al servicio Web Push.',
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribePushService = async () => {
+    setIsSubscribing(true);
+    setTestResult(null);
+    try {
+      await unsubscribeFromPushService(user?.uid);
+      setActiveSubscription(null);
+      updatePush({ subscription: undefined });
+      setPermStatus(getNotificationPermissionStatus());
+      setTestResult({
+        success: true,
+        msg: 'Te has desuscrito correctamente del servicio Web Push.',
+      });
+    } catch (e: any) {
+      setTestResult({
+        success: false,
+        msg: e?.message || 'Error al desuscribir el servicio Web Push.',
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
+  const handleCopySubscription = () => {
+    if (!activeSubscription) return;
+    try {
+      navigator.clipboard.writeText(JSON.stringify(activeSubscription, null, 2));
+      setCopiedSub(true);
+      setTimeout(() => setCopiedSub(false), 2000);
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
     }
   };
 
@@ -214,6 +234,87 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     sounds.playClick();
   };
 
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecciona un archivo de imagen (JPG, PNG o WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const rawDataUrl = event.target?.result as string;
+      if (!rawDataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 280;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          onUpdateSettings({
+            userAvatar: compressedDataUrl,
+            userAvatarType: 'upload',
+          });
+          sounds.playSuccessChime();
+        }
+      };
+      img.src = rawDataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleSelectPresetAvatar = (presetId: string) => {
+    onUpdateSettings({
+      userAvatar: presetId,
+      userAvatarType: 'preset',
+    });
+    sounds.playClick();
+  };
+
+  const handleSelectEmojiAvatar = (emoji: string) => {
+    onUpdateSettings({
+      userAvatar: emoji,
+      userAvatarType: 'emoji',
+    });
+    sounds.playClick();
+  };
+
+  const handleClearAvatar = () => {
+    onUpdateSettings({
+      userAvatar: 'preset:sparkle',
+      userAvatarType: 'preset',
+    });
+    sounds.playClick();
+  };
+
+  const currentUserName = settings.userName?.trim() || 'Paco';
+  const greetingPreview = getTimeGreeting(currentUserName);
+
+  const EMOJI_OPTIONS = ['😊', '😎', '🎯', '🚀', '💡', '🦁', '🌟', '🧘', '☕', '🌸', '🦊', '⚡'];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div
@@ -249,6 +350,23 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
 
         {/* Tab Navigation */}
         <div className="flex border-b border-neutral-200 dark:border-neutral-800 px-4 sm:px-6 bg-neutral-100/60 dark:bg-[#12141e]/60 overflow-x-auto gap-1">
+          {/* TAB: Perfil & Bienvenida */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('profile');
+              sounds.playClick();
+            }}
+            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === 'profile'
+                ? 'border-[#e8533a] text-[#e8533a]'
+                : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
+            }`}
+          >
+            <User className="w-4 h-4" />
+            <span>Perfil & Bienvenida</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -323,93 +441,421 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               </span>
             )}
           </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('changelog');
-              sounds.playClick();
-            }}
-            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeTab === 'changelog'
-                ? 'border-[#e8533a] text-[#e8533a]'
-                : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Novedades</span>
-            <span className="text-[10px] bg-[#e8533a]/15 text-[#e8533a] font-bold px-1.5 py-0.5 rounded-md">
-              v2.5
-            </span>
-          </button>
         </div>
 
         {/* Tab Contents */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {/* TAB 0: PERFIL Y PÁGINA DE BIENVENIDA */}
+          {activeTab === 'profile' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Profile Avatar & Greeting Preview */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-orange-50/70 via-amber-50/40 to-neutral-50 dark:from-neutral-800/80 dark:via-[#1c1f2e] dark:to-neutral-900 border border-orange-200/70 dark:border-neutral-700/80 space-y-5 shadow-xs">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                  {/* Avatar Preview */}
+                  <div className="relative group shrink-0">
+                    <UserAvatar
+                      avatar={settings.userAvatar}
+                      avatarType={settings.userAvatarType}
+                      userName={currentUserName}
+                      size="xl"
+                      className="ring-4 ring-[#e8533a]/30 shadow-lg"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 p-2 rounded-full bg-[#e8533a] hover:bg-[#d4432c] text-white shadow-md transition-all active:scale-95 cursor-pointer"
+                      title="Subir fotografía"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Greeting Live Preview */}
+                  <div className="flex-1 text-center sm:text-left space-y-1.5 min-w-0">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
+                      <Sparkles className="w-3 h-3" />
+                      <span>Vista previa de tu bienvenida</span>
+                    </div>
+
+                    <h3 className="text-xl sm:text-2xl font-extrabold text-neutral-900 dark:text-white">
+                      {greetingPreview.greeting}
+                    </h3>
+
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Personaliza tu foto o avatar y el nombre que aparecerá en tu página de bienvenida diaria.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Direct Action: Open Welcome Page */}
+                {onOpenWelcomeView && (
+                  <div className="pt-3 border-t border-orange-200/50 dark:border-neutral-700/60 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      ¿Quieres ver cómo luce tu página de bienvenida completa?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenWelcomeView();
+                      }}
+                      className="px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 cursor-pointer shrink-0"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Ver Página de Bienvenida</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 1. Nombre de usuario */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1c29] space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <User className="w-4 h-4 text-[#e8533a]" />
+                      <span>Nombre de Usuario</span>
+                    </h4>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      El nombre con el que te saludará la app cada día.
+                    </p>
+                  </div>
+
+                  {user?.displayName && settings.userName !== user.displayName && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateSettings({ userName: user.displayName || '' })}
+                      className="text-xs text-[#e8533a] hover:underline font-semibold cursor-pointer shrink-0"
+                    >
+                      Usar nombre de Google
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={settings.userName || ''}
+                    onChange={(e) => onUpdateSettings({ userName: e.target.value })}
+                    placeholder="Escribe tu nombre (ej. Paco, María...)"
+                    maxLength={35}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-sm font-semibold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#e8533a]"
+                  />
+                  {settings.userName && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateSettings({ userName: '' })}
+                      className="px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 text-xs font-medium cursor-pointer"
+                    >
+                      Limpiar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. Fotografía o Avatar */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1c29] space-y-4 shadow-2xs">
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-[#e8533a]" />
+                    <span>Fotografía o Avatar</span>
+                  </h4>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Sube una foto personal desde tu dispositivo o elige uno de los avatares prediseñados.
+                  </p>
+                </div>
+
+                {/* Subir Fotografía Personal */}
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="px-4 py-2 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 text-xs font-bold shadow-xs flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Subir Foto Personal</span>
+                  </button>
+
+                  {user?.photoURL && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onUpdateSettings({
+                          userAvatar: user.photoURL || '',
+                          userAvatarType: 'upload',
+                        });
+                        sounds.playSuccessChime();
+                      }}
+                      className="px-3.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-2 cursor-pointer"
+                    >
+                      <img
+                        src={user.photoURL}
+                        alt="Google"
+                        className="w-4 h-4 rounded-full"
+                        referrerPolicy="no-referrer"
+                      />
+                      <span>Usar foto de Google</span>
+                    </button>
+                  )}
+
+                  {settings.userAvatar && (
+                    <button
+                      type="button"
+                      onClick={handleClearAvatar}
+                      className="px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-neutral-500 hover:text-rose-600 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Restablecer</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Colección de Avatares Predefinidos */}
+                <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    O elige un avatar temático con estilo:
+                  </span>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {PRESET_AVATARS.map((preset) => {
+                      const isSelected =
+                        settings.userAvatar === preset.id &&
+                        settings.userAvatarType === 'preset';
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleSelectPresetAvatar(preset.id)}
+                          className={`p-2 rounded-2xl flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            isSelected
+                              ? 'ring-2 ring-[#e8533a] bg-orange-50 dark:bg-orange-950/40 scale-105'
+                              : 'hover:bg-neutral-100 dark:hover:bg-neutral-800/80 opacity-80 hover:opacity-100'
+                          }`}
+                          title={preset.label}
+                        >
+                          <div
+                            className={`w-10 h-10 rounded-full bg-gradient-to-tr ${preset.gradient} flex items-center justify-center text-lg shadow-xs`}
+                          >
+                            <span>{preset.emoji}</span>
+                          </div>
+                          <span className="text-[10px] text-neutral-600 dark:text-neutral-400 truncate max-w-full font-medium">
+                            {preset.label.split(' ')[0]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Emojis Rápidos */}
+                <div className="space-y-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    O elige un emoji para tu perfil:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {EMOJI_OPTIONS.map((em) => {
+                      const isSelected =
+                        settings.userAvatar === em && settings.userAvatarType === 'emoji';
+                      return (
+                        <button
+                          key={em}
+                          type="button"
+                          onClick={() => handleSelectEmojiAvatar(em)}
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition-transform cursor-pointer ${
+                            isSelected
+                              ? 'ring-2 ring-[#e8533a] bg-orange-100 dark:bg-orange-950/60 scale-110 shadow-xs'
+                              : 'bg-neutral-100 dark:bg-neutral-800 hover:scale-105'
+                          }`}
+                        >
+                          <span>{em}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Opciones de Pantalla de Bienvenida */}
+              <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1c29] flex items-center justify-between gap-4 shadow-2xs">
+                <div>
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
+                    Mostrar bienvenida al abrir la app
+                  </h4>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Inicia siempre mostrando tu página de bienvenida con tu saludo y la frase motivadora del día.
+                  </p>
+                </div>
+
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settings.showWelcomeOnStartup ?? true}
+                    onChange={(e) => onUpdateSettings({ showWelcomeOnStartup: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-300 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#e8533a]"></div>
+                </label>
+              </div>
+            </div>
+          )}
+
           {/* TAB 1: PUSH NOTIFICATIONS */}
           {activeTab === 'push' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Permission & Status Hero Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/60 dark:from-neutral-800/80 dark:to-neutral-800/40 border border-amber-200/80 dark:border-neutral-700 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
+              {/* Web Push Subscription Service Hero Card */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-orange-50 via-amber-50 to-white dark:from-neutral-800/90 dark:via-neutral-800/60 dark:to-neutral-900 border border-orange-200/80 dark:border-neutral-700 space-y-4 shadow-xs">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-[#e8533a] text-white shadow-xs">
-                      <Bell className="w-5 h-5" />
+                      <Radio className="w-5 h-5 animate-pulse" />
                     </div>
                     <div>
-                      <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">
-                        {t('push.title', currentLang)}
+                      <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <span>Servicio de Suscripción Web Push</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 font-bold border border-orange-200 dark:border-orange-800">
+                          Web Push API
+                        </span>
                       </h3>
-                      <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                        {t('push.desc', currentLang)}
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
+                        Recordatorios diarios automáticos de tareas, resumen matutino y revisión nocturna con Service Worker.
                       </p>
                     </div>
                   </div>
 
                   {/* Status Badge */}
                   <div className="shrink-0">
-                    {permStatus === 'granted' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-                        <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        {t('push.permGranted', currentLang)}
+                    {activeSubscription ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        Suscripción Activa
+                      </span>
+                    ) : permStatus === 'granted' ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300 dark:border-blue-800 shadow-2xs">
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        Permiso concedido
                       </span>
                     ) : permStatus === 'denied' ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs">
                         <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
                         {t('push.permDenied', currentLang)}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-2xs">
                         <Info className="w-3.5 h-3.5 text-amber-600" />
-                        {t('push.permDefault', currentLang)}
+                        No suscrito
                       </span>
                     )}
                   </div>
                 </div>
 
-                {/* Compatibility info and Permission CTA */}
+                {/* Subscription Action & State */}
                 {!isSupported ? (
                   <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs">
                     ⚠️ {t('push.statusUnsupported', currentLang)}
                   </div>
-                ) : permStatus !== 'granted' ? (
-                  <div className="pt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-t border-amber-200/60 dark:border-neutral-700/60">
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                      {permStatus === 'denied'
-                        ? t('push.deniedHelp', currentLang)
-                        : 'Haz clic en el botón para que el navegador te solicite permiso para recibir notificaciones.'}
-                    </p>
-                    {permStatus !== 'denied' && (
+                ) : (
+                  <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-orange-200/60 dark:border-neutral-700/60">
+                    <div className="text-xs text-neutral-600 dark:text-neutral-400">
+                      {activeSubscription ? (
+                        <p className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-medium">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          Tu dispositivo está suscrito y listo para recibir recordatorios diarios de tareas.
+                        </p>
+                      ) : permStatus === 'denied' ? (
+                        <p className="text-rose-600 dark:text-rose-400">
+                          {t('push.deniedHelp', currentLang)}
+                        </p>
+                      ) : (
+                        <p>
+                          Activa el servicio Web Push para recibir notificaciones automáticas incluso con la pestaña en segundo plano.
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {activeSubscription ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setShowSubscriptionDetails(!showSubscriptionDetails)}
+                            className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Key className="w-3.5 h-3.5 text-neutral-500" />
+                            <span>Detalles</span>
+                            {showSubscriptionDetails ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleUnsubscribePushService}
+                            disabled={isSubscribing}
+                            className="px-3.5 py-1.5 rounded-xl border border-rose-300 dark:border-rose-800 text-xs font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            {isSubscribing ? 'Procesando...' : 'Desuscribirse'}
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleSubscribePushService}
+                          disabled={isSubscribing || permStatus === 'denied'}
+                          className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md transition-all shrink-0 active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          <Radio className="w-4 h-4" />
+                          <span>{isSubscribing ? 'Suscribiendo...' : 'Suscribirse al Servicio Push'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Collapsible Subscription Technical Details Box */}
+                {showSubscriptionDetails && activeSubscription && (
+                  <div className="p-3.5 rounded-xl bg-neutral-900 text-neutral-200 text-xs font-mono space-y-2 border border-neutral-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                        Credenciales de la suscripción (VAPID / Web Push)
+                      </span>
                       <button
                         type="button"
-                        onClick={handleRequestPermission}
-                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md transition-all shrink-0 active:scale-95 cursor-pointer"
+                        onClick={handleCopySubscription}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-[11px] font-sans font-medium transition-all cursor-pointer"
                       >
-                        {t('push.requestPerm', currentLang)}
+                        <Copy className="w-3 h-3" />
+                        <span>{copiedSub ? '¡Copiado!' : 'Copiar JSON'}</span>
                       </button>
-                    )}
+                    </div>
+                    <div className="space-y-1 overflow-x-auto text-[11px]">
+                      <div>
+                        <span className="text-amber-400">Endpoint:</span>{' '}
+                        <span className="text-neutral-300 break-all">{activeSubscription.endpoint}</span>
+                      </div>
+                      <div>
+                        <span className="text-emerald-400">Auth Key:</span>{' '}
+                        <span className="text-neutral-300">{activeSubscription.keys?.auth}</span>
+                      </div>
+                      <div>
+                        <span className="text-blue-400">p256dh Key:</span>{' '}
+                        <span className="text-neutral-300 break-all">{activeSubscription.keys?.p256dh}</span>
+                      </div>
+                      {activeSubscription.createdAt && (
+                        <div className="text-[10px] text-neutral-500 pt-1 border-t border-neutral-800">
+                          Suscripción registrada: {new Date(activeSubscription.createdAt).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ) : null}
+                )}
               </div>
 
               {/* Master Switch */}
@@ -427,8 +873,8 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                     type="checkbox"
                     checked={pushSettings.enabled}
                     onChange={(e) => {
-                      if (e.target.checked && permStatus !== 'granted') {
-                        handleRequestPermission();
+                      if (e.target.checked && !activeSubscription && permStatus !== 'granted') {
+                        handleSubscribePushService();
                       } else {
                         updatePush({ enabled: e.target.checked });
                       }
@@ -441,7 +887,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
 
               {/* Specific Push Reminder Config Cards */}
               <div className="space-y-4">
-                {/* 1. Task Reminders */}
+                {/* 1. Task Reminders with Active Days Selector */}
                 <div className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1c29] space-y-3 shadow-2xs">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -469,22 +915,38 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   </div>
 
                   {pushSettings.taskRemindersEnabled && (
-                    <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-4 flex-wrap">
-                      <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
-                        {t('push.leadTime', currentLang)}:
-                      </span>
-                      <select
-                        value={pushSettings.taskReminderLeadMinutes}
-                        onChange={(e) => updatePush({ taskReminderLeadMinutes: Number(e.target.value) })}
-                        className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
-                      >
-                        <option value={0}>{t('push.leadExact', currentLang)}</option>
-                        <option value={5}>{t('push.lead5m', currentLang)}</option>
-                        <option value={10}>{t('push.lead10m', currentLang)}</option>
-                        <option value={15}>{t('push.lead15m', currentLang)}</option>
-                        <option value={30}>{t('push.lead30m', currentLang)}</option>
-                        <option value={60}>{t('push.lead60m', currentLang)}</option>
-                      </select>
+                    <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+                          {t('push.leadTime', currentLang)}:
+                        </span>
+                        <select
+                          value={pushSettings.taskReminderLeadMinutes}
+                          onChange={(e) => updatePush({ taskReminderLeadMinutes: Number(e.target.value) })}
+                          className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+                        >
+                          <option value={0}>{t('push.leadExact', currentLang)}</option>
+                          <option value={5}>{t('push.lead5m', currentLang)}</option>
+                          <option value={10}>{t('push.lead10m', currentLang)}</option>
+                          <option value={15}>{t('push.lead15m', currentLang)}</option>
+                          <option value={30}>{t('push.lead30m', currentLang)}</option>
+                          <option value={60}>{t('push.lead60m', currentLang)}</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4 flex-wrap pt-2 border-t border-neutral-100 dark:border-neutral-800/60">
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
+                          Días activos para recordatorios diarios:
+                        </span>
+                        <select
+                          value={pushSettings.activeDays || 'all'}
+                          onChange={(e) => updatePush({ activeDays: e.target.value as 'all' | 'weekdays' })}
+                          className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold text-neutral-800 dark:text-neutral-200"
+                        >
+                          <option value="all">Todos los días (Lunes a Domingo)</option>
+                          <option value="weekdays">Solo días laborables (Lunes a Viernes)</option>
+                        </select>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -951,35 +1413,6 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                     ))}
                 </div>
               </div>
-
-              {/* Quick Changelog Card inside General Tab */}
-              <div className="p-4 rounded-2xl border border-[#e8533a]/25 bg-gradient-to-br from-[#e8533a]/5 to-amber-500/5 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#e8533a]/15 text-[#e8533a] flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs sm:text-sm font-bold text-neutral-900 dark:text-white">
-                        Registro de cambios (Changelog)
-                      </h4>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#e8533a] text-white">
-                        v2.5.0
-                      </span>
-                    </div>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Consulta todas las mejoras y funciones añadidas hasta la versión 2.5.0.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('changelog')}
-                  className="px-3 py-2 rounded-xl bg-white dark:bg-[#161824] border border-neutral-200 dark:border-neutral-700 text-xs font-bold text-[#e8533a] hover:border-[#e8533a] transition-colors shrink-0 cursor-pointer"
-                >
-                  Ver novedades
-                </button>
-              </div>
             </div>
           )}
 
@@ -1045,96 +1478,10 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               </div>
             </div>
           )}
-
-          {/* TAB 5: CHANGELOG (NOVEDADES v1.0.0 -> v2.5.0) */}
-          {activeTab === 'changelog' && (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#e8533a]/10 via-amber-500/5 to-transparent border border-[#e8533a]/25 flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-[#e8533a] text-white shrink-0 shadow-xs">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-sm sm:text-base font-bold text-neutral-900 dark:text-white">
-                      Registro de Cambios y Novedades
-                    </h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#e8533a] text-white">
-                      Versión 2.5.0
-                    </span>
-                  </div>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                    Historial completo desde el lanzamiento inicial (v1.0.0) hasta la versión 2.5.0 de Mi Calendario de Tareas.
-                  </p>
-                </div>
-              </div>
-
-              <div className="relative pl-4 sm:pl-6 border-l-2 border-neutral-200 dark:border-neutral-800 space-y-6">
-                {CHANGELOG_RELEASES.map((release, idx) => (
-                  <div key={release.version} className="relative">
-                    {/* Timeline dot */}
-                    <div
-                      className={`absolute -left-[21px] sm:-left-[29px] top-1.5 w-3.5 h-3.5 rounded-full border-2 ${
-                        idx === 0
-                          ? 'bg-[#e8533a] border-white dark:border-[#151722] ring-4 ring-[#e8533a]/20'
-                          : 'bg-neutral-300 dark:bg-neutral-700 border-white dark:border-[#151722]'
-                      }`}
-                    />
-
-                    <div className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1c29] shadow-2xs space-y-2.5">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white">
-                            {release.version}
-                          </span>
-                          <span
-                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                              idx === 0
-                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-[#e8533a]/10 text-[#e8533a]'
-                            }`}
-                          >
-                            {release.badge}
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-neutral-400 font-medium">
-                          {release.date}
-                        </span>
-                      </div>
-
-                      <h4 className="text-sm font-bold text-neutral-900 dark:text-white">
-                        {release.title}
-                      </h4>
-
-                      <ul className="space-y-1.5 pt-1">
-                        {release.items.map((item, i) => (
-                          <li
-                            key={i}
-                            className="text-xs text-neutral-600 dark:text-neutral-300 flex items-start gap-2 leading-relaxed"
-                          >
-                            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-5 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-[#1a1c29]/50 shrink-0">
-          <button
-            type="button"
-            onClick={() => setActiveTab('changelog')}
-            className="flex items-center gap-2 text-xs text-neutral-500 hover:text-[#e8533a] transition-colors cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Versión 2.5.0 · Ver registro de cambios</span>
-          </button>
-
+        <div className="p-4 sm:p-5 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-end bg-neutral-50/50 dark:bg-[#1a1c29]/50 shrink-0">
           <button
             type="button"
             onClick={onClose}

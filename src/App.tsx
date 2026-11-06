@@ -25,6 +25,7 @@ import { WeightTrackerView } from './components/WeightTrackerView';
 import { ShoppingView } from './components/ShoppingView';
 import { JournalView } from './components/JournalView';
 import { HabitTrackerView } from './components/HabitTrackerView';
+import { WelcomeView } from './components/WelcomeView';
 import { TaskModal } from './components/TaskModal';
 import { ToastAlarms } from './components/ToastAlarms';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
@@ -552,14 +553,14 @@ export default function App() {
 
   const [currentCategory, setCurrentCategory] = useState<CategoryKey | 'all'>('all');
   const [activeView, setActiveView] = useState<
-    'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits'
-  >('month');
+    'welcome' | 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits'
+  >(() => (settings.showWelcomeOnStartup ?? true ? 'welcome' : 'month'));
 
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<
-    'push' | 'language' | 'general' | 'security' | 'changelog' | undefined
+    'profile' | 'push' | 'language' | 'general' | 'security' | undefined
   >(undefined);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
@@ -583,6 +584,7 @@ export default function App() {
   const isPremium = !!settings.premium?.isPremium;
 
   const getTabTitle = (view: string, cat: CategoryKey | 'all'): string => {
+    if (view === 'welcome') return 'Inicio y Bienvenida';
     if (view === 'day') return 'Calendario Día';
     if (view === 'week') return 'Calendario Semana';
     if (view === 'menus') return 'Menús Semanales';
@@ -1151,13 +1153,38 @@ export default function App() {
   };
 
   const handleDeleteJournalEntry = async (idOrDate: string) => {
-    setJournalEntries((prev) => prev.filter((e) => e.id !== idOrDate && e.date !== idOrDate));
+    const target = journalEntries.find((e) => e.id === idOrDate || e.date === idOrDate);
+    const targetId = target?.id || idOrDate;
+    const targetDate = target?.date || (isValidIsoDateString(idOrDate) ? idOrDate : undefined);
+
+    setJournalEntries((prev) =>
+      prev.filter((e) => e.id !== targetId && (targetDate ? e.date !== targetDate : true))
+    );
+
+    // Also persist immediately to localStorage
+    try {
+      const stored = localStorage.getItem('diario-v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const filtered = parsed.filter(
+            (e: any) => e.id !== targetId && (targetDate ? e.date !== targetDate : true)
+          );
+          localStorage.setItem('diario-v1', JSON.stringify(filtered));
+        }
+      }
+    } catch {}
 
     if (user) {
       try {
-        await deleteDoc(doc(db, 'users', user.uid, 'journal', idOrDate));
+        await deleteDoc(doc(db, 'users', user.uid, 'journal', targetId));
+        if (targetDate && targetDate !== targetId) {
+          try {
+            await deleteDoc(doc(db, 'users', user.uid, 'journal', targetDate));
+          } catch {}
+        }
       } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/journal/${idOrDate}`);
+        handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/journal/${targetId}`);
       }
     }
   };
@@ -1482,10 +1509,6 @@ export default function App() {
           setSettingsInitialTab('push');
           setIsSettingsModalOpen(true);
         }}
-        onOpenChangelog={() => {
-          setSettingsInitialTab('changelog');
-          setIsSettingsModalOpen(true);
-        }}
         onOpenSubscription={() => setIsSubscriptionModalOpen(true)}
         isOpenMobile={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
@@ -1508,7 +1531,9 @@ export default function App() {
             <div>
               <h1 className="text-xl sm:text-2xl font-serif font-bold text-neutral-900 dark:text-neutral-100 leading-tight">
                 {currentCategory === 'all'
-                  ? activeView === 'journal'
+                  ? activeView === 'welcome'
+                    ? 'Inicio & Bienvenida'
+                    : activeView === 'journal'
                     ? t('header.journalTitle', currentLang)
                     : activeView === 'habits'
                     ? t('header.habitsTitle', currentLang)
@@ -1530,7 +1555,9 @@ export default function App() {
                   : `${CATEGORY_MAP[currentCategory]?.e || '📌'} ${getCategoryLocalizedName(currentCategory, currentLang)}`}
               </h1>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                {activeView === 'day'
+                {activeView === 'welcome'
+                  ? `Hola de nuevo, ${settings.userName || 'Paco'} · Inspiración diaria y tareas`
+                  : activeView === 'day'
                   ? `${getLocalizedDayName((currentDayDate.getDay() + 6) % 7, true, currentLang)}, ${currentDayDate.getDate()} de ${getLocalizedMonthName(currentDayDate.getMonth(), currentLang)} ${currentDayDate.getFullYear()}`
                   : `${getLocalizedMonthName(currentDate.getMonth(), currentLang)} ${currentDate.getFullYear()} · ${t('header.subtitle', currentLang)}`}
               </p>
@@ -1693,19 +1720,7 @@ export default function App() {
               </button>
             )}
 
-            {/* Quick Changelog v2.5.0 Pill */}
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsInitialTab('changelog');
-                setIsSettingsModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-[#e8533a]/30 bg-[#e8533a]/10 hover:bg-[#e8533a]/20 text-[#e8533a] text-xs font-bold transition-all shadow-2xs cursor-pointer"
-              title="Ver registro de cambios (Versión 2.5.0)"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span className="font-mono">v2.5.0</span>
-            </button>
+
 
             {/* User Settings Gear CTA */}
             <button
@@ -1877,6 +1892,25 @@ export default function App() {
           )}
 
           {/* Dynamic Viewport View */}
+          {activeView === 'welcome' && (
+            <WelcomeView
+              settings={settings}
+              tasks={tasks}
+              medications={medications}
+              habits={habits}
+              onOpenSettings={(tab) => {
+                setSettingsInitialTab(tab);
+                setIsSettingsModalOpen(true);
+              }}
+              onNavigateView={(v) => {
+                setCurrentCategory('all');
+                setActiveView(v);
+              }}
+              onToggleTaskDone={handleToggleTask}
+              onOpenNewTaskModal={(dStr) => handleOpenNewTask(dStr)}
+            />
+          )}
+
           {activeView === 'month' && (
             <MonthView
               currentDate={currentDate}
@@ -2290,6 +2324,10 @@ export default function App() {
         onOpenPinModal={() => {
           setDiaryPinModalMode('change');
           setIsDiaryPinModalOpen(true);
+        }}
+        onOpenWelcomeView={() => {
+          setCurrentCategory('all');
+          setActiveView('welcome');
         }}
       />
 

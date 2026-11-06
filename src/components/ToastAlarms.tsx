@@ -8,6 +8,8 @@ import {
   sendMedicationReminderPush,
   sendDailyDigestPush,
   sendEveningReviewPush,
+  sendDailyTaskBriefingPush,
+  sendDailyTaskEveningReviewPush,
   isInQuietHours,
 } from '../utils/pushNotifications';
 import { Bell, Check, Clock, X, Pill } from 'lucide-react';
@@ -160,32 +162,47 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
         }
       });
 
-      // 3. Daily Morning Digest check
+      // Check active days for daily scheduled push notifications
+      const dayOfWeek = now.getDay(); // 0 is Sunday, 6 is Saturday
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const skipForWeekend = pushSettings?.activeDays === 'weekdays' && isWeekend;
+
+      // 3. Daily Morning Task Briefing & Digest check
       if (
         pushSettings?.enabled &&
         pushSettings?.dailyDigestEnabled &&
-        pushSettings.dailyDigestTime === currentHHMM
+        pushSettings.dailyDigestTime === currentHHMM &&
+        !skipForWeekend
       ) {
         const digestKey = `digest-${todayStr}`;
         if (!sessionStorage.getItem(digestKey)) {
           sessionStorage.setItem(digestKey, 'sent');
           const todayTasks = tasks.filter((tItem) => tItem && tItem.d === todayStr && !tItem.done);
           const activeMeds = medications.filter((m) => m && m.on);
-          sendDailyDigestPush(todayTasks.length, activeMeds.length, pushSettings, currentLang);
+          // Send task-focused daily briefing
+          sendDailyTaskBriefingPush(todayTasks, pushSettings, currentLang);
+          if (activeMeds.length > 0) {
+            sendDailyDigestPush(todayTasks.length, activeMeds.length, pushSettings, currentLang);
+          }
         }
       }
 
-      // 4. Evening Habit Review check
+      // 4. Daily Evening Task Review check
       if (
         pushSettings?.enabled &&
         pushSettings?.eveningReviewEnabled &&
-        pushSettings.eveningReviewTime === currentHHMM
+        pushSettings.eveningReviewTime === currentHHMM &&
+        !skipForWeekend
       ) {
         const eveningKey = `evening-${todayStr}`;
         if (!sessionStorage.getItem(eveningKey)) {
           sessionStorage.setItem(eveningKey, 'sent');
+          const pendingTodayTasks = tasks.filter((tItem) => tItem && tItem.d === todayStr && !tItem.done);
+          sendDailyTaskEveningReviewPush(pendingTodayTasks, pushSettings, currentLang);
           const uncompletedHabits = habits.filter((h) => h && !h.archived && !h.history?.[todayStr]);
-          sendEveningReviewPush(uncompletedHabits.length, pushSettings, currentLang);
+          if (uncompletedHabits.length > 0) {
+            sendEveningReviewPush(uncompletedHabits.length, pushSettings, currentLang);
+          }
         }
       }
     }, 10000);

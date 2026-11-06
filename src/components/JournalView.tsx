@@ -115,6 +115,10 @@ export const JournalView: React.FC<JournalViewProps> = ({
   const [filterMood, setFilterMood] = useState<JournalMood | 'all'>('all');
   const [filterFavoritesOnly, setFilterFavoritesOnly] = useState(false);
 
+  // Deletion modal & feedback state
+  const [entryToDelete, setEntryToDelete] = useState<JournalEntry | { id: string; date: string; title?: string } | null>(null);
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
+
   // Load entry for selectedDate
   useEffect(() => {
     const existing = entries.find((e) => e.date === selectedDate);
@@ -223,17 +227,49 @@ export const JournalView: React.FC<JournalViewProps> = ({
     });
   };
 
-  // Delete current entry
-  const handleDeleteCurrent = () => {
-    onDeleteEntry(selectedDate);
-    setTitle('');
-    setContent('');
-    setMood(undefined);
-    setTags([]);
-    setDrawing(null);
-    setVoiceNotes([]);
-    setAttachments([]);
-    setIsFavorite(false);
+  // Current entry existence check
+  const currentEntry = entries.find((e) => e.date === selectedDate || e.id === selectedDate);
+  const hasCurrentEntry = Boolean(
+    currentEntry ||
+      title.trim() ||
+      content.trim() ||
+      drawing ||
+      (voiceNotes && voiceNotes.length > 0) ||
+      (attachments && attachments.length > 0)
+  );
+
+  // Request deletion for currently opened day
+  const handleRequestDeleteCurrent = () => {
+    if (!hasCurrentEntry) return;
+    setEntryToDelete(
+      currentEntry || {
+        id: selectedDate,
+        date: selectedDate,
+        title: title.trim() || `Entrada del ${selectedDate}`,
+      }
+    );
+  };
+
+  // Confirm delete handler (for modal)
+  const handleConfirmDelete = () => {
+    if (!entryToDelete) return;
+    const targetId = entryToDelete.id || entryToDelete.date;
+    onDeleteEntry(targetId);
+
+    if (selectedDate === entryToDelete.date || selectedDate === entryToDelete.id) {
+      setTitle('');
+      setContent('');
+      setMood(undefined);
+      setTags([]);
+      setDrawing(null);
+      setVoiceNotes([]);
+      setAttachments([]);
+      setIsFavorite(false);
+    }
+
+    setEntryToDelete(null);
+    setDeleteNotice('Entrada eliminada correctamente');
+    setTimeout(() => setDeleteNotice(null), 3000);
   };
 
   // Tags
@@ -711,14 +747,17 @@ export const JournalView: React.FC<JournalViewProps> = ({
             <Star className={`w-4 h-4 ${isFavorite ? 'fill-amber-400' : ''}`} />
           </button>
 
-          <button
-            type="button"
-            onClick={handleDeleteCurrent}
-            className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-rose-600 hover:border-rose-300 transition-colors"
-            title="Eliminar entrada de este día"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {hasCurrentEntry && (
+            <button
+              type="button"
+              onClick={handleRequestDeleteCurrent}
+              className="px-3 py-2 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 hover:border-rose-300 dark:hover:border-rose-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
+              title="Eliminar entrada de este día"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Borrar entrada</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1263,17 +1302,29 @@ export const JournalView: React.FC<JournalViewProps> = ({
                         {entry.favorite && <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedDate(entry.date);
-                          setInputMode('text');
-                        }}
-                        className="px-3 py-1 rounded-xl bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 flex items-center gap-1"
-                      >
-                        <PenLine className="w-3 h-3" />
-                        <span>Abrir</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedDate(entry.date);
+                            setInputMode('text');
+                          }}
+                          className="px-3 py-1 rounded-xl bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 flex items-center gap-1 transition-colors"
+                        >
+                          <PenLine className="w-3 h-3" />
+                          <span>Abrir</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setEntryToDelete(entry)}
+                          className="px-2.5 py-1 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold flex items-center gap-1 transition-colors"
+                          title="Eliminar esta entrada del diario"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Borrar</span>
+                        </button>
+                      </div>
                     </div>
 
                     {entry.title && (
@@ -1404,6 +1455,63 @@ export const JournalView: React.FC<JournalViewProps> = ({
               ) : null}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {entryToDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setEntryToDelete(null)}
+        >
+          <div
+            className="bg-white dark:bg-[#161824] border border-neutral-200 dark:border-neutral-800 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-neutral-900 dark:text-neutral-100 font-serif">
+                  ¿Eliminar entrada del diario?
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {getFormattedDateLong(entryToDelete.date)}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed bg-neutral-50 dark:bg-neutral-900/50 p-3.5 rounded-2xl border border-neutral-100 dark:border-neutral-800">
+              Se eliminará permanentemente la entrada{entryToDelete.title ? ` «${entryToDelete.title}»` : ''}, incluyendo su texto, notas de voz, trazos y archivos adjuntos. Esta acción no se puede deshacer.
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setEntryToDelete(null)}
+                className="px-4 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-xs font-semibold text-white shadow-md shadow-rose-600/20 transition-all flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Eliminar definitivamente</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating delete feedback toast */}
+      {deleteNotice && (
+        <div className="fixed bottom-6 right-6 z-50 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2 duration-200 border border-neutral-700 dark:border-neutral-200">
+          <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600 stroke-[2.5]" />
+          <span>{deleteNotice}</span>
         </div>
       )}
     </div>

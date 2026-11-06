@@ -327,6 +327,10 @@ export const INITIAL_SETTINGS: UserSettings = {
   enableSound: true,
   language: 'es',
   pushNotifications: DEFAULT_PUSH_SETTINGS,
+  userName: 'Paco',
+  userAvatar: 'preset:sparkle',
+  userAvatarType: 'preset',
+  showWelcomeOnStartup: true,
 };
 
 export const JOURNAL_MOODS: Record<JournalMood, { label: string; emoji: string; color: string; bg: string }> = {

@@ -115,16 +115,19 @@ export const MonthView: React.FC<MonthViewProps> = ({
             const maxTasks = dayJournal ? 2 : 3;
             const visibleTasks = dayTasks.slice(0, maxTasks);
             const overflowCount = dayTasks.length - maxTasks;
+            const hasTasks = dayTasks.length > 0;
 
             return (
               <div
                 key={i}
                 onClick={() => onAddTaskForDate(dateStr)}
-                className={`min-h-[110px] sm:min-h-[115px] p-1.5 sm:p-2 flex flex-col group cursor-pointer transition-colors relative ${
+                className={`min-h-[110px] sm:min-h-[115px] p-1.5 sm:p-2 flex flex-col group cursor-pointer transition-all duration-200 relative ${
                   isToday
                     ? 'bg-[#fdfaf7] dark:bg-[#1b1c2b]'
+                    : hasTasks
+                    ? 'hover:bg-[#fff9f5] dark:hover:bg-[#1b1c2c] hover:ring-2 hover:ring-[#e8533a]/35'
                     : 'hover:bg-[#f6f3eb]/70 dark:hover:bg-[#1a1c2a]/60'
-                }`}
+                } ${hasTasks ? 'hover:z-20 hover:shadow-md' : 'hover:z-10'}`}
               >
                 {/* Day Header */}
                 <div className="flex items-center justify-between mb-1.5">
@@ -139,6 +142,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold tabular-nums transition-transform shrink-0 cursor-pointer hover:ring-2 hover:ring-[#e8533a]/50 ${
                         isToday
                           ? 'bg-[#e8533a] text-white shadow-sm font-bold scale-105'
+                          : hasTasks
+                          ? 'text-neutral-800 dark:text-neutral-200 group-hover:text-[#e8533a] dark:group-hover:text-[#ff6a52] group-hover:font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700'
                           : 'text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-700'
                       }`}
                       title="Ver en vista diaria de este día"
@@ -203,7 +208,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 </div>
 
                 {/* Task Chips & Journal Badge */}
-                <div className="space-y-1 flex-1 overflow-hidden">
+                <div className="space-y-1 group-hover:space-y-1.5 flex-1 overflow-hidden group-hover:overflow-visible transition-all duration-200">
                   {/* Journal Entry Prominent Badge */}
                   {dayJournal && (
                     <div
@@ -246,10 +251,10 @@ export const MonthView: React.FC<MonthViewProps> = ({
                           e.stopPropagation();
                           onOpenTask(t);
                         }}
-                        className={`text-[11px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-medium transition-all truncate border group/item ${
+                        className={`text-[11px] group-hover:text-[13.5px] sm:group-hover:text-[14px] px-1.5 py-0.5 group-hover:py-1 sm:group-hover:py-1.5 group-hover:px-2 rounded-md group-hover:rounded-lg flex items-center gap-1.5 font-medium group-hover:font-bold transition-all duration-150 truncate border group/item relative shadow-2xs group-hover:shadow-md group-hover:scale-[1.02] ${
                           t.done
-                            ? 'opacity-40 line-through bg-neutral-100 dark:bg-neutral-800 border-transparent text-neutral-500'
-                            : 'hover:scale-[1.01] hover:shadow-xs'
+                            ? 'opacity-40 line-through bg-neutral-100 dark:bg-neutral-800 border-transparent text-neutral-500 group-hover:opacity-75 group-hover:bg-neutral-200/80 dark:group-hover:bg-neutral-800/90'
+                            : 'group-hover:bg-white dark:group-hover:bg-[#191b2b] group-hover:border-current group-hover:ring-1 group-hover:ring-current/25'
                         }`}
                         style={{
                           backgroundColor: t.done ? undefined : `${cat.c}14`,
@@ -264,20 +269,31 @@ export const MonthView: React.FC<MonthViewProps> = ({
                             e.stopPropagation();
                             onToggleTask(t.id);
                           }}
-                          className={`w-3 h-3 rounded-full border shrink-0 flex items-center justify-center transition-colors ${
+                          className={`w-3 h-3 group-hover:w-3.5 group-hover:h-3.5 rounded-full border shrink-0 flex items-center justify-center transition-all ${
                             t.done
                               ? 'bg-neutral-500 border-neutral-500 text-white'
-                              : 'border-current opacity-70 hover:opacity-100'
+                              : 'border-current opacity-70 hover:opacity-100 group-hover:opacity-100'
                           }`}
                           title={t.done ? 'Marcar como pendiente' : 'Marcar como hecha'}
                         >
-                          {t.done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          {t.done && <Check className="w-2.5 h-2.5 group-hover:w-3 group-hover:h-3 stroke-[3]" />}
                         </button>
-                        <span className="truncate flex-1">{displayLabel}</span>
-                        {t.alarm !== null && t.alarm !== undefined && (
-                          <span className="text-[9px] opacity-75 shrink-0">🔔</span>
+
+                        {/* Time badge */}
+                        {t.h && (
+                          <span className="font-mono text-[9.5px] group-hover:text-[11px] font-semibold opacity-75 group-hover:opacity-100 shrink-0">
+                            {t.h}
+                          </span>
                         )}
-                        {t.ink && <span className="text-[9px] opacity-75 shrink-0">✍️</span>}
+
+                        <span className="truncate flex-1 group-hover:tracking-tight">
+                          {displayLabel}
+                        </span>
+
+                        {t.alarm !== null && t.alarm !== undefined && (
+                          <span className="text-[9px] group-hover:text-[11px] opacity-75 group-hover:opacity-100 shrink-0">🔔</span>
+                        )}
+                        {t.ink && <span className="text-[9px] group-hover:text-[11px] opacity-75 group-hover:opacity-100 shrink-0">✍️</span>}
                         {onDeleteTask && (
                           <button
                             type="button"
@@ -285,12 +301,31 @@ export const MonthView: React.FC<MonthViewProps> = ({
                               e.stopPropagation();
                               onDeleteTask(t.id);
                             }}
-                            className="p-0.5 rounded hover:bg-rose-500 hover:text-white text-current opacity-60 hover:opacity-100 transition-colors shrink-0 ml-auto"
+                            className="p-0.5 rounded hover:bg-rose-500 hover:text-white text-current opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-all shrink-0 ml-auto"
                             title="Eliminar tarea programada"
                           >
-                            <X className="w-2.5 h-2.5 stroke-[2.5]" />
+                            <X className="w-2.5 h-2.5 group-hover:w-3 group-hover:h-3 stroke-[2.5]" />
                           </button>
                         )}
+
+                        {/* Floating full detail preview on individual task hover */}
+                        <div className="hidden group-hover/item:flex absolute bottom-full left-0 mb-1.5 z-50 bg-[#161824] dark:bg-white text-white dark:text-[#161824] px-2.5 py-1.5 rounded-xl shadow-2xl pointer-events-none min-w-[170px] max-w-[280px] flex-col gap-0.5 border border-neutral-700/80 dark:border-neutral-200 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-neutral-300 dark:text-neutral-600">
+                            <span className="font-bold flex items-center gap-1">
+                              <span>{cat.e}</span>
+                              <span>{cat.n}</span>
+                            </span>
+                            <span className="font-bold">{t.h}</span>
+                          </div>
+                          <p className="text-xs sm:text-[13px] font-bold leading-snug break-words">
+                            {displayLabel}
+                          </p>
+                          {t.n && (
+                            <p className="text-[10px] text-neutral-300 dark:text-neutral-600 line-clamp-2 mt-0.5 font-normal">
+                              {t.n}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -302,7 +337,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
                         e.stopPropagation();
                         setSelectedDayPopover({ dateStr, dayNum, tasks: dayTasks });
                       }}
-                      className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 pl-1"
+                      className="text-[10px] group-hover:text-xs font-semibold text-neutral-500 group-hover:text-[#e8533a] dark:text-neutral-400 dark:group-hover:text-[#ff6a52] hover:underline pl-1 transition-all"
                     >
                       +{overflowCount} más...
                     </button>

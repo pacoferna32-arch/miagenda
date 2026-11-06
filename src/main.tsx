@@ -4,13 +4,23 @@ import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext';
 import './index.css';
 
-// Unregister any stale dev service workers that could cache outdated modules in preview
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.DEV) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister().catch(() => {});
-    }
-  }).catch(() => {});
+// Registrar Service Worker para Web Push y Recordatorios
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw-push.js', { scope: '/' })
+      .then((reg) => {
+        // Service Worker registrado correctamente
+        if (reg.installing) {
+          console.log('Push Service Worker instalándose...');
+        } else if (reg.active) {
+          console.log('Push Service Worker activo.');
+        }
+      })
+      .catch((err) => {
+        console.warn('Error al registrar Service Worker de Push:', err);
+      });
+  });
 }
 
 interface ErrorBoundaryState {
