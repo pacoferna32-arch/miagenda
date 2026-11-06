@@ -153,14 +153,16 @@ export const JournalView: React.FC<JournalViewProps> = ({
 
   // Day navigation
   const handlePrevDay = () => {
-    const [y, m, d] = selectedDate.split('-').map(Number);
+    const safeDate = typeof selectedDate === 'string' && selectedDate.includes('-') ? selectedDate : toIsoDate(new Date());
+    const [y, m, d] = safeDate.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     dateObj.setDate(dateObj.getDate() - 1);
     setSelectedDate(toIsoDate(dateObj));
   };
 
   const handleNextDay = () => {
-    const [y, m, d] = selectedDate.split('-').map(Number);
+    const safeDate = typeof selectedDate === 'string' && selectedDate.includes('-') ? selectedDate : toIsoDate(new Date());
+    const [y, m, d] = safeDate.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     dateObj.setDate(dateObj.getDate() + 1);
     setSelectedDate(toIsoDate(dateObj));
@@ -171,10 +173,11 @@ export const JournalView: React.FC<JournalViewProps> = ({
   };
 
   const getFormattedDateLong = (dateStr: string) => {
+    if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('-')) return dateStr || '';
     const [y, m, d] = dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     const dayOfWeek = (dateObj.getDay() + 6) % 7;
-    return `${DIAS_COMPLETOS[dayOfWeek]}, ${d} de ${MESES[m - 1]} de ${y}`;
+    return `${DIAS_COMPLETOS[dayOfWeek] || ''}, ${d} de ${MESES[m - 1] || MESES[0]} de ${y}`;
   };
 
   // Save current entry
@@ -187,7 +190,6 @@ export const JournalView: React.FC<JournalViewProps> = ({
       attachments.length > 0;
 
     if (!hasData) {
-      alert('Por favor añade alguna nota escrita, trazo, nota de voz o archivo para guardar la entrada.');
       return;
     }
 
@@ -223,7 +225,6 @@ export const JournalView: React.FC<JournalViewProps> = ({
 
   // Delete current entry
   const handleDeleteCurrent = () => {
-    if (!confirm('¿Estás seguro de que deseas eliminar la entrada de este día del diario?')) return;
     onDeleteEntry(selectedDate);
     setTitle('');
     setContent('');
@@ -269,7 +270,6 @@ export const JournalView: React.FC<JournalViewProps> = ({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Tu navegador no soporta dictado por voz.');
       return;
     }
 
@@ -362,7 +362,7 @@ export const JournalView: React.FC<JournalViewProps> = ({
       // Start live transcription
       startLiveSpeech();
     } catch (err) {
-      alert('No se pudo acceder al micrófono para grabar la nota de voz.');
+      console.warn('No se pudo acceder al micrófono:', err);
     }
   };
 
@@ -445,18 +445,19 @@ export const JournalView: React.FC<JournalViewProps> = ({
 
     for (const file of filesArray) {
       if (file.size > 5 * 1024 * 1024) {
-        alert(`El archivo "${file.name}" supera el límite de 5 MB.`);
         continue;
       }
 
-      const isImage = file.type.startsWith('image/');
-      const isAudio = file.type.startsWith('audio/');
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const fileType = file.type || '';
+      const fileName = file.name || '';
+      const isImage = fileType.startsWith('image/');
+      const isAudio = fileType.startsWith('audio/');
+      const isPdf = fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
       const isDoc =
-        file.type.includes('word') ||
-        file.type.includes('document') ||
-        file.type.includes('text') ||
-        file.name.match(/\.(docx?|xlsx?|txt|csv|json)$/i);
+        fileType.includes('word') ||
+        fileType.includes('document') ||
+        fileType.includes('text') ||
+        Boolean(fileName.match(/\.(docx?|xlsx?|txt|csv|json)$/i));
 
       const dataUrl = await new Promise<string>((res) => {
         const reader = new FileReader();
@@ -503,18 +504,19 @@ export const JournalView: React.FC<JournalViewProps> = ({
   // Filtered timeline
   const filteredTimeline = entries
     .filter((entry) => {
+      if (!entry || typeof entry.date !== 'string') return false;
       if (filterFavoritesOnly && !entry.favorite) return false;
       if (filterMood !== 'all' && entry.mood !== filterMood) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchesTitle = entry.title?.toLowerCase().includes(q);
-        const matchesContent = entry.content.toLowerCase().includes(q);
-        const matchesTags = entry.tags?.some((t) => t.toLowerCase().includes(q));
+        const matchesTitle = (entry.title || '').toLowerCase().includes(q);
+        const matchesContent = (entry.content || '').toLowerCase().includes(q);
+        const matchesTags = entry.tags?.some((t) => (t || '').toLowerCase().includes(q));
         if (!matchesTitle && !matchesContent && !matchesTags) return false;
       }
       return true;
     })
-    .sort((a, b) => b.date.localeCompare(a.date));
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   // ---------------- LOCKED SCREEN: REQUIRES 4-DIGIT PIN ----------------
   if (!isUnlocked) {
@@ -1154,12 +1156,7 @@ export const JournalView: React.FC<JournalViewProps> = ({
                         </div>
                       ) : att.type === 'pdf' ? (
                         <div
-                          onClick={() => {
-                            const w = window.open();
-                            w?.document.write(
-                              `<iframe src="${att.dataUrl}" style="border:0; width:100%; height:100%;" allowfullscreen></iframe>`
-                            );
-                          }}
+                          onClick={() => setPreviewAttachment(att)}
                           className="w-full h-28 rounded-xl bg-red-50 dark:bg-red-950/40 flex flex-col items-center justify-center p-2 text-red-600 mb-2 cursor-pointer"
                         >
                           <FileText className="w-8 h-8 mb-1" />
@@ -1400,9 +1397,11 @@ export const JournalView: React.FC<JournalViewProps> = ({
               </button>
             </div>
             <div className="p-4 flex items-center justify-center overflow-auto max-h-[75vh]">
-              {previewAttachment.type === 'image' && (
+              {previewAttachment.type === 'image' ? (
                 <img src={previewAttachment.dataUrl} alt={previewAttachment.name} className="max-w-full max-h-[70vh] object-contain rounded-xl" />
-              )}
+              ) : previewAttachment.type === 'pdf' ? (
+                <iframe src={previewAttachment.dataUrl} title={previewAttachment.name} className="w-[80vw] max-w-2xl h-[70vh] rounded-xl border-0" />
+              ) : null}
             </div>
           </div>
         </div>

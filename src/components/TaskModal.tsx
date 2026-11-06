@@ -152,13 +152,6 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
-      if (onRequireAuth) {
-        onRequireAuth();
-      }
-      return;
-    }
-
     // Auto-infer title if left blank in specialized categories
     let finalTitle = title.trim();
     if (!finalTitle) {
@@ -236,26 +229,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
-          {/* Auth warning if not logged in */}
+          {/* Optional Cloud Sync hint if not logged in */}
           {!user && (
-            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
-              <span className="text-lg shrink-0">🔒</span>
-              <div className="space-y-1">
-                <span className="font-bold block">Registro necesario para guardar</span>
-                <p className="text-[11px] leading-relaxed">
-                  Para guardar tareas y mantenerlas sincronizadas en todos tus dispositivos, inicia sesión o regístrate con Google, Apple o tu correo electrónico.
-                </p>
+            <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between gap-2 text-xs text-emerald-900 dark:text-emerald-200">
+              <span>💾 Tu tarea se guardará en este dispositivo al instante.</span>
+              {onRequireAuth && (
                 <button
                   type="button"
                   onClick={() => {
                     onClose();
-                    if (onRequireAuth) onRequireAuth();
+                    onRequireAuth();
                   }}
-                  className="mt-1 text-xs font-bold text-[#e8533a] underline hover:opacity-80"
+                  className="text-[11px] font-bold text-[#e8533a] underline hover:opacity-80 shrink-0 cursor-pointer"
                 >
-                  Iniciar sesión o registrarme ahora →
+                  Sincronizar en la nube →
                 </button>
-              </div>
+              )}
             </div>
           )}
 
@@ -822,9 +811,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <button
               type="button"
               onClick={handleSubmit}
-              className="px-5 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+              className="px-5 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer"
             >
-              <span>{user ? 'Guardar tarea ✓' : 'Iniciar sesión para guardar 🔒'}</span>
+              <span>Guardar tarea ✓</span>
             </button>
           </div>
         </div>

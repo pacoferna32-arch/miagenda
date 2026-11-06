@@ -55,6 +55,7 @@ export const ListView: React.FC<ListViewProps> = ({
 
   // Filter tasks
   const filteredTasks = tasks.filter((task) => {
+    if (!task || typeof task.d !== 'string') return false;
     if (statusFilter === 'pending' && task.done) return false;
     if (statusFilter === 'completed' && !task.done) return false;
 
@@ -64,7 +65,7 @@ export const ListView: React.FC<ListViewProps> = ({
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchTitle = task.t.toLowerCase().includes(q);
+      const matchTitle = (task.t || '').toLowerCase().includes(q);
       const matchNotes = (task.n || '').toLowerCase().includes(q);
       const matchLoc = (task.lugar || '').toLowerCase().includes(q);
       const matchConcept = (task.concepto || '').toLowerCase().includes(q);
@@ -78,19 +79,26 @@ export const ListView: React.FC<ListViewProps> = ({
   const groupedTasks: Record<string, Task[]> = {};
   filteredTasks
     .slice()
-    .sort((a, b) => (a.d + a.h).localeCompare(b.d + b.h))
+    .sort((a, b) => ((a.d || '') + (a.h || '')).localeCompare((b.d || '') + (b.h || '')))
     .forEach((t) => {
-      if (!groupedTasks[t.d]) groupedTasks[t.d] = [];
-      groupedTasks[t.d].push(t);
+      const dKey = t.d || todayStr;
+      if (!groupedTasks[dKey]) groupedTasks[dKey] = [];
+      groupedTasks[dKey].push(t);
     });
 
   const sortedDates = Object.keys(groupedTasks).sort();
 
   const getDateHeader = (dateStr: string) => {
     const d = new Date(`${dateStr}T00:00:00`);
-    const dayOfWeek = DIAS_COMPLETOS[(d.getDay() + 6) % 7];
+    if (Number.isNaN(d.getTime())) {
+      return {
+        isToday: false,
+        label: dateStr || 'Sin fecha',
+      };
+    }
+    const dayOfWeek = DIAS_COMPLETOS[(d.getDay() + 6) % 7] || '';
     const dayNum = d.getDate();
-    const monthName = MESES[d.getMonth()];
+    const monthName = MESES[d.getMonth()] || MESES[0];
     const year = d.getFullYear();
 
     const isToday = dateStr === todayStr;

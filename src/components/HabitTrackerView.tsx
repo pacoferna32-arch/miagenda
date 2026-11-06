@@ -654,11 +654,9 @@ export const HabitTrackerView: React.FC<HabitTrackerViewProps> = ({
                             <button
                               type="button"
                               onClick={() => {
-                                if (window.confirm(`¿Seguro que deseas eliminar el hábito "${habit.name}"?`)) {
-                                  onDeleteHabit(habit.id);
-                                }
+                                onDeleteHabit(habit.id);
                               }}
-                              className="p-1.5 rounded-lg text-neutral-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                              className="p-1.5 rounded-lg text-neutral-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
                               title="Eliminar hábito"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

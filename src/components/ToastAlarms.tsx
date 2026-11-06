@@ -61,6 +61,7 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
 
       // 1. Check tasks
       tasks.forEach((tTask) => {
+        if (!tTask || typeof tTask.d !== 'string' || typeof tTask.h !== 'string') return;
         if (tTask.done || tTask.fired) return;
         if (tTask.snooze && nowMs < tTask.snooze) return;
 
@@ -70,6 +71,7 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
           : (pushSettings?.taskReminderLeadMinutes ?? 10);
 
         const dueTime = new Date(`${tTask.d}T${tTask.h}:00`).getTime();
+        if (Number.isNaN(dueTime)) return;
         const alertTime = tTask.snooze ? 0 : dueTime - leadMin * 60 * 1000;
 
         // If time reached and within reasonable window (past 3 hours)
@@ -85,9 +87,9 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
             // Web Push notification
             if (pushSettings?.enabled && pushSettings.taskRemindersEnabled) {
               sendTaskReminderPush(
-                tTask.t,
+                tTask.t || 'Tarea',
                 tTask.h,
-                tTask.n,
+                tTask.n || '',
                 pushSettings,
                 currentLang
               );
@@ -98,7 +100,7 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
               {
                 id: alertKey,
                 type: 'task',
-                title: tTask.t,
+                title: tTask.t || 'Tarea',
                 subtitle: `${tTask.h} · ${tTask.n || t('cat.recordatorios', currentLang)}`,
                 targetId: tTask.id,
                 timeStr: tTask.h,
@@ -110,7 +112,8 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
 
       // 2. Check medications
       medications.forEach((m) => {
-        if (!m.on || m.taken[todayStr] || m.alerted[todayStr]) return;
+        if (!m || typeof m.h !== 'string') return;
+        if (!m.on || m.taken?.[todayStr] || m.alerted?.[todayStr]) return;
         if (m.snooze && nowMs < m.snooze) return;
 
         // Lead time: medication lead or push settings lead
@@ -119,6 +122,7 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
           : (pushSettings?.medicationReminderLeadMinutes ?? 5);
 
         const dueTime = new Date(`${todayStr}T${m.h}:00`).getTime();
+        if (Number.isNaN(dueTime)) return;
         const alertTime = m.snooze ? 0 : dueTime - leadMin * 60 * 1000;
 
         if (nowMs >= alertTime && nowMs <= dueTime + 3 * 3600 * 1000) {
@@ -133,8 +137,8 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
             // Web Push notification
             if (pushSettings?.enabled && pushSettings.medicationRemindersEnabled) {
               sendMedicationReminderPush(
-                m.n,
-                m.dose,
+                m.n || 'Medicamento',
+                m.dose || '1 toma',
                 m.h,
                 pushSettings,
                 currentLang
@@ -146,8 +150,8 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
               {
                 id: alertKey,
                 type: 'medication',
-                title: `${t('nav.medication', currentLang)}: ${m.n}`,
-                subtitle: `${m.dose} · ${m.h}`,
+                title: `${t('nav.medication', currentLang)}: ${m.n || 'Medicamento'}`,
+                subtitle: `${m.dose || '1 toma'} · ${m.h}`,
                 targetId: m.id,
                 timeStr: m.h,
               },
@@ -165,8 +169,8 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
         const digestKey = `digest-${todayStr}`;
         if (!sessionStorage.getItem(digestKey)) {
           sessionStorage.setItem(digestKey, 'sent');
-          const todayTasks = tasks.filter((t) => t.d === todayStr && !t.done);
-          const activeMeds = medications.filter((m) => m.on);
+          const todayTasks = tasks.filter((tItem) => tItem && tItem.d === todayStr && !tItem.done);
+          const activeMeds = medications.filter((m) => m && m.on);
           sendDailyDigestPush(todayTasks.length, activeMeds.length, pushSettings, currentLang);
         }
       }
@@ -180,7 +184,7 @@ export const ToastAlarms: React.FC<ToastAlarmsProps> = ({
         const eveningKey = `evening-${todayStr}`;
         if (!sessionStorage.getItem(eveningKey)) {
           sessionStorage.setItem(eveningKey, 'sent');
-          const uncompletedHabits = habits.filter((h) => !h.archived && !h.history[todayStr]);
+          const uncompletedHabits = habits.filter((h) => h && !h.archived && !h.history?.[todayStr]);
           sendEveningReviewPush(uncompletedHabits.length, pushSettings, currentLang);
         }
       }

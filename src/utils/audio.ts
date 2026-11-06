@@ -123,6 +123,14 @@ class SoundManager {
     this.playCompleteChime();
   }
 
+  playSuccess() {
+    this.playCompleteChime();
+  }
+
+  playAlarm() {
+    this.playAlarmChime();
+  }
+
   playClick() {
     try {
       const ctx = this.getContext();

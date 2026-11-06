@@ -48,7 +48,12 @@ export const FinanzasView: React.FC<FinanzasViewProps> = ({
   // Month-specific finance tasks
   const monthFinanceTasks = useMemo(() => {
     return tasks.filter(
-      (t) => t.c === 'finanzas' && t.fin && t.d.startsWith(currentYearMonth)
+      (t) =>
+        t &&
+        t.c === 'finanzas' &&
+        t.fin &&
+        typeof t.d === 'string' &&
+        t.d.startsWith(currentYearMonth)
     );
   }, [tasks, currentYearMonth]);
 
@@ -66,11 +71,20 @@ export const FinanzasView: React.FC<FinanzasViewProps> = ({
   // Compute monthly data for recharts (Jan-Dec for the selected year)
   const monthlyData = useMemo(() => {
     const yearPrefix = `${selectedYear}-`;
-    const yearTasks = tasks.filter((t) => t.c === 'finanzas' && t.fin && t.d.startsWith(yearPrefix));
+    const yearTasks = tasks.filter(
+      (t) =>
+        t &&
+        t.c === 'finanzas' &&
+        t.fin &&
+        typeof t.d === 'string' &&
+        t.d.startsWith(yearPrefix)
+    );
 
     return MESES.map((mesName, idx) => {
       const monthStr = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
-      const inMonth = yearTasks.filter((t) => t.d.startsWith(monthStr));
+      const inMonth = yearTasks.filter(
+        (t) => typeof t.d === 'string' && t.d.startsWith(monthStr)
+      );
 
       const ingresos = inMonth
         .filter((t) => t.fin === 'ingreso')
@@ -512,7 +526,7 @@ export const FinanzasView: React.FC<FinanzasViewProps> = ({
           <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
             {displayedTasks
               .slice()
-              .sort((a, b) => b.d.localeCompare(a.d))
+              .sort((a, b) => (b.d || '').localeCompare(a.d || ''))
               .map((task) => (
                 <div
                   key={task.id}
@@ -533,7 +547,7 @@ export const FinanzasView: React.FC<FinanzasViewProps> = ({
                         {task.concepto || task.t}
                       </p>
                       <p className="text-[10px] text-neutral-500">
-                        {task.d.split('-').reverse().join('/')} · {task.h}
+                        {(task.d || '').split('-').reverse().join('/')} · {task.h || '09:00'}
                       </p>
                     </div>
                   </div>

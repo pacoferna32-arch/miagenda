@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, Unlock, KeyRound, Delete, X, ShieldAlert, Sparkles, Check } from 'lucide-react';
+import {
+  Lock,
+  Unlock,
+  Delete,
+  X,
+  Check,
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { sounds } from '../utils/audio';
 
 interface DiaryPinModalProps {
   isOpen: boolean;
@@ -29,6 +36,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [isShaking, setIsShaking] = useState(false);
   const [successNotice, setSuccessNotice] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -36,6 +44,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
       setFirstNewPin('');
       setErrorMessage('');
       setSuccessNotice(false);
+      setConfirmingReset(false);
       setInternalMode(!savedPin ? 'set_new' : mode === 'change' ? 'set_new' : 'enter');
     }
   }, [isOpen, savedPin, mode]);
@@ -86,6 +95,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
   const processCompletedPin = (pin: string) => {
     if (internalMode === 'enter') {
       if (pin === savedPin) {
+        sounds.playSuccess();
         setSuccessNotice(true);
         setTimeout(() => {
           onSuccess();
@@ -128,7 +138,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
           title="Cerrar y volver"
         >
           <X className="w-5 h-5" />
@@ -156,7 +166,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
 
         <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-xs mb-6">
           {internalMode === 'enter'
-            ? 'Introduce tu clave de cuatro dígitos para desbloquear tus pensamientos y notas privadas.'
+            ? 'Introduce tu PIN de 4 dígitos para desbloquear tus notas privadas.'
             : internalMode === 'set_new'
             ? 'Elige una clave de 4 dígitos para proteger tu diario íntimo frente a miradas indiscretas.'
             : 'Vuelve a teclear la misma clave de 4 dígitos para verificarla.'}
@@ -193,18 +203,18 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
         {/* Success message */}
         {successNotice && (
           <p className="text-xs font-semibold text-emerald-500 mb-3 flex items-center gap-1 justify-center animate-in fade-in">
-            <Check className="w-4 h-4" /> Clave correcta. Desbloqueando...
+            <Check className="w-4 h-4" /> Acceso verificado. Desbloqueando...
           </p>
         )}
 
         {/* Numeric Keypad (1 to 9, 0, Delete) */}
-        <div className="grid grid-cols-3 gap-3 w-full max-w-[260px] my-2">
+        <div className="grid grid-cols-3 gap-3 w-full max-w-[260px] my-1">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
             <button
               key={digit}
               type="button"
               onClick={() => handleDigitPress(digit)}
-              className="h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:border-violet-300 text-lg font-semibold text-neutral-800 dark:text-neutral-200 active:scale-92 transition-all border border-neutral-200/60 dark:border-neutral-700/60 shadow-2xs"
+              className="h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:border-violet-300 text-lg font-semibold tabular-nums text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all border border-neutral-200/60 dark:border-neutral-700/60 shadow-2xs cursor-pointer"
             >
               {digit}
             </button>
@@ -221,7 +231,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
                 setEnteredPin('');
               }
             }}
-            className="h-12 rounded-2xl text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center"
+            className="h-12 rounded-2xl text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center cursor-pointer"
           >
             Borrar
           </button>
@@ -229,7 +239,7 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
           <button
             type="button"
             onClick={() => handleDigitPress('0')}
-            className="h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:border-violet-300 text-lg font-semibold text-neutral-800 dark:text-neutral-200 active:scale-92 transition-all border border-neutral-200/60 dark:border-neutral-700/60 shadow-2xs"
+            className="h-12 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:border-violet-300 text-lg font-semibold tabular-nums text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all border border-neutral-200/60 dark:border-neutral-700/60 shadow-2xs cursor-pointer"
           >
             0
           </button>
@@ -237,36 +247,54 @@ export const DiaryPinModal: React.FC<DiaryPinModalProps> = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="h-12 rounded-2xl text-neutral-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center justify-center"
+            className="h-12 rounded-2xl text-neutral-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors flex items-center justify-center cursor-pointer"
             title="Retroceso"
           >
             <Delete className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Footer actions: Reset / Forgot PIN */}
+        {/* Footer actions: Reset / Forgot PIN without window.confirm */}
         {savedPin && internalMode === 'enter' && (
           <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 w-full flex items-center justify-between text-[11px] text-neutral-500">
-            <button
-              type="button"
-              onClick={() => {
-                if (
-                  confirm(
-                    '¿Deseas restablecer tu clave de 4 dígitos? Podrás configurar una nueva ahora mismo.'
-                  )
-                ) {
-                  onSaveNewPin('');
-                  setEnteredPin('');
-                  setFirstNewPin('');
-                  setInternalMode('set_new');
-                }
-              }}
-              className="text-neutral-400 hover:text-violet-600 transition-colors underline"
-            >
-              Restablecer clave
-            </button>
-
-            <span className="text-neutral-400">Teclado numérico activo</span>
+            {confirmingReset ? (
+              <div className="flex items-center justify-between w-full gap-2">
+                <span className="text-rose-600 font-semibold">¿Restablecer clave?</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSaveNewPin('');
+                      setEnteredPin('');
+                      setFirstNewPin('');
+                      setConfirmingReset(false);
+                      setInternalMode('set_new');
+                    }}
+                    className="px-2 py-1 rounded bg-rose-600 text-white font-bold cursor-pointer"
+                  >
+                    Sí, nueva
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingReset(false)}
+                    className="px-2 py-1 rounded border border-neutral-300 dark:border-neutral-700 cursor-pointer"
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingReset(true)}
+                  className="text-neutral-400 hover:text-violet-600 transition-colors underline cursor-pointer"
+                >
+                  Restablecer clave
+                </button>
+                <span className="text-neutral-400">Touch ID / Face ID / PIN</span>
+              </>
+            )}
           </div>
         )}
       </div>

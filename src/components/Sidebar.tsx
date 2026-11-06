@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { CategoryKey, Task, Medication, UserSettings } from '../types';
-import { CATEGORIES, CATEGORY_MAP, MESES } from '../utils/constants';
+import { CATEGORIES } from '../utils/constants';
 import {
   Calendar,
   CalendarDays,
@@ -23,12 +23,11 @@ import {
   RotateCcw,
   LogOut,
   Settings,
-  Globe,
   Crown,
   Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { t, getCategoryLocalizedName } from '../utils/i18n';
+import { t } from '../utils/i18n';
 import { AdBanner } from './AdBanner';
 
 interface SidebarProps {
@@ -49,6 +48,7 @@ interface SidebarProps {
   onOpenIOSModal: () => void;
   onOpenAuthModal: () => void;
   onOpenSettings?: () => void;
+  onOpenChangelog?: () => void;
   onOpenSubscription?: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
@@ -72,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenIOSModal,
   onOpenAuthModal,
   onOpenSettings,
+  onOpenChangelog,
   onOpenSubscription,
   isOpenMobile,
   onCloseMobile,
@@ -82,7 +83,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isPremium = !!settings.premium?.isPremium;
 
   const currentYearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-  const monthTasks = tasks.filter((t) => t.d.startsWith(currentYearMonth) && !t.done);
+  const monthTasks = tasks.filter(
+    (t) => t && typeof t.d === 'string' && t.d.startsWith(currentYearMonth) && !t.done
+  );
 
   const getCategoryCount = (key: CategoryKey) => {
     return monthTasks.filter((t) => t.c === key).length;
@@ -140,73 +143,65 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* User Account Bar */}
         <div className="px-3 pt-3 pb-1">
-          {user ? (
-            <div className="w-full p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-2 transition-colors">
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenAuthModal();
-                  onCloseMobile();
-                }}
-                className="flex items-center gap-2.5 flex-1 min-w-0 text-left hover:opacity-85 transition-opacity"
-                title="Ver perfil y sincronización"
-              >
-                <div className="w-8 h-8 rounded-full bg-[#e8533a] flex items-center justify-center font-bold text-xs text-white shrink-0 overflow-hidden shadow-xs">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    (user.displayName || user.email || 'U')[0].toUpperCase()
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-white truncate">
-                    {user.displayName || user.email?.split('@')[0] || 'Mi Cuenta'}
-                  </p>
-                  {isPremium ? (
-                    <p className="text-[10px] text-amber-300 flex items-center gap-1 font-bold">
-                      <Crown className="w-3 h-3 text-amber-300" />
-                      Premium Vitalicio
-                    </p>
-                  ) : (
-                    <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-                      En la nube
-                    </p>
-                  )}
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (confirm('¿Deseas cerrar tu sesión?')) {
-                    await logout();
-                    onCloseMobile();
-                  }
-                }}
-                className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 hover:bg-white/10 transition-colors shrink-0"
-                title="Cerrar sesión"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
+          <div className="w-full p-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between gap-2 transition-colors">
             <button
               type="button"
               onClick={() => {
                 onOpenAuthModal();
                 onCloseMobile();
               }}
-              className="w-full p-2.5 rounded-xl bg-gradient-to-r from-[#e8533a]/25 to-amber-500/15 border border-[#e8533a]/40 hover:border-[#e8533a] flex items-center gap-2 transition-all text-left group shadow-xs"
+              className="flex items-center gap-2.5 flex-1 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer"
+              title="Ver perfil y sincronización de cuenta"
             >
-              <div className="w-7 h-7 rounded-lg bg-[#e8533a] flex items-center justify-center text-sm text-white shrink-0 shadow-xs">
-                👤
-              </div>
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt={user.displayName || 'Usuario'}
+                  className="w-8 h-8 rounded-full object-cover ring-1 ring-white/20 shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#e8533a] to-amber-500 flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-xs">
+                  {(user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white group-hover:text-amber-200 transition-colors">Iniciar sesión / Registro</p>
-                <p className="text-[10px] text-white/60 truncate">Google, Apple o Email</p>
+                <p className="text-xs font-semibold text-white truncate">
+                  {user?.displayName || user?.email?.split('@')[0] || 'Mi Cuenta'}
+                </p>
+                {user?.email && (
+                  <p className="text-[10px] text-white/60 truncate font-mono">
+                    {user.email}
+                  </p>
+                )}
+                {isPremium ? (
+                  <p className="text-[10px] text-amber-300 flex items-center gap-1 font-bold mt-0.5">
+                    <Crown className="w-3 h-3 text-amber-300" />
+                    Premium Vitalicio
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                    {user ? 'Sincronizado' : 'Modo local'}
+                  </p>
+                )}
               </div>
             </button>
-          )}
+            {user && (
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  onCloseMobile();
+                }}
+                className="p-1.5 rounded-lg text-white/40 hover:text-rose-400 hover:bg-white/10 transition-colors shrink-0 cursor-pointer"
+                title={t('header.logout', currentLang)}
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
           {/* Lifetime Subscription Unlock Card (Only for free tier) */}
           {!isPremium && onOpenSubscription && (
@@ -253,7 +248,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('month');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'month' && currentCategory === 'all'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -273,7 +268,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('week');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'week' && currentCategory === 'all'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -290,7 +285,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('day');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'day' && currentCategory === 'all'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -307,7 +302,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('list');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'list' && currentCategory === 'all'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -324,7 +319,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('menus');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'menus'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -341,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('shopping');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'shopping'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -358,7 +353,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('medication');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'medication'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -378,7 +373,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('weight');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'weight'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -395,7 +390,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('finanzas');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'finanzas'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -411,7 +406,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('journal');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'journal'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -428,7 +423,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelectView('habits');
                   onCloseMobile();
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
                   activeView === 'habits'
                     ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
                     : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -451,12 +446,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onOpenSettings();
                     onCloseMobile();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-white transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/5 hover:bg-white/10 text-white transition-colors cursor-pointer"
                 >
                   <Settings className="w-4 h-4 shrink-0 text-amber-300" />
                   <span className="flex-1 text-left">{t('nav.settings', currentLang)}</span>
                   <span className="text-[10px] bg-white/15 px-1.5 py-0.5 rounded font-mono uppercase">
                     {currentLang}
+                  </span>
+                </button>
+              )}
+
+              {/* Changelog (v2.5.0) Quick Access */}
+              {onOpenChangelog && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenChangelog();
+                    onCloseMobile();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#e8533a]/15 hover:bg-[#e8533a]/25 border border-[#e8533a]/30 text-amber-200 transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span className="flex-1 text-left">Novedades (Changelog)</span>
+                  <span className="text-[10px] bg-[#e8533a] text-white px-1.5 py-0.5 rounded font-mono font-bold">
+                    v2.5.0
                   </span>
                 </button>
               )}
@@ -467,7 +480,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onOpenAndroidModal();
                   onCloseMobile();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors shadow-xs"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors shadow-xs cursor-pointer"
               >
                 <span className="text-sm">🤖</span>
                 <span className="flex-1 text-left">Instalar en Android (APK)</span>
@@ -482,7 +495,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onOpenIOSModal();
                   onCloseMobile();
                 }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-sky-600/20 text-sky-300 border border-sky-500/30 hover:bg-sky-600/30 transition-colors shadow-xs"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-sky-600/20 text-sky-300 border border-sky-500/30 hover:bg-sky-600/30 transition-colors shadow-xs cursor-pointer"
               >
                 <span className="text-sm">🍏</span>
                 <span className="flex-1 text-left">Instalar en iOS / iPhone</span>
@@ -522,7 +535,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       }
                       onCloseMobile();
                     }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs transition-colors ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
                       isSelected
                         ? 'bg-white/15 text-white font-semibold'
                         : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -560,7 +573,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => onUpdateSettings({ theme: isDarkMode ? 'light' : 'dark' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition-colors cursor-pointer"
               title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-sky-300" />}
@@ -571,7 +584,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => onUpdateSettings({ enableSound: !settings.enableSound })}
-              className={`p-1.5 rounded-lg text-xs transition-colors ${
+              className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                 settings.enableSound ? 'text-white/80 hover:bg-white/10' : 'text-white/40 hover:bg-white/10'
               }`}
               title={settings.enableSound ? 'Sonido activado' : 'Sonido silenciado'}
@@ -587,7 +600,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onOpenSettings();
                   onCloseMobile();
                 }}
-                className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-amber-300 transition-colors"
+                className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-amber-300 transition-colors cursor-pointer"
                 title={t('settings.title', currentLang)}
               >
                 <Settings className="w-4 h-4 text-amber-300" />
@@ -598,7 +611,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onExportBackup}
-              className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 transition-colors cursor-pointer"
               title="Descargar copia de seguridad (JSON)"
             >
               <Download className="w-4 h-4" />
@@ -608,7 +621,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg text-white/80 hover:bg-white/10 transition-colors cursor-pointer"
               title="Restaurar copia de seguridad"
             >
               <Upload className="w-4 h-4" />
@@ -621,14 +634,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="hidden"
             />
 
-            {/* Reset sample data */}
+            {/* Reset data */}
             <button
               type="button"
               onClick={() => {
-                if (confirm('¿Restablecer los datos de ejemplo iniciales?')) onResetData();
+                onResetData();
               }}
-              className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
-              title="Restablecer datos iniciales de prueba"
+              className="p-1.5 rounded-lg text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors cursor-pointer"
+              title="Limpiar datos"
             >
               <RotateCcw className="w-4 h-4" />
             </button>

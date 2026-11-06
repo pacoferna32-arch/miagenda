@@ -55,7 +55,19 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
 
   // Sorting
   const sortedAll = useMemo(() => {
-    return weights.slice().sort((a, b) => a.d.localeCompare(b.d));
+    return (Array.isArray(weights) ? weights : [])
+      .filter(
+        (w): w is WeightEntry =>
+          Boolean(
+            w &&
+              typeof w.d === 'string' &&
+              w.d.trim().length > 0 &&
+              typeof w.kg === 'number' &&
+              !Number.isNaN(w.kg)
+          )
+      )
+      .slice()
+      .sort((a, b) => (a.d || '').localeCompare(b.d || ''));
   }, [weights]);
 
   const latestWeight = sortedAll.length > 0 ? sortedAll[sortedAll.length - 1] : null;
@@ -93,7 +105,9 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
 
   // Monthly stats
   const currentYearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-  const monthWeights = sortedAll.filter((w) => w.d.startsWith(currentYearMonth));
+  const monthWeights = sortedAll.filter(
+    (w) => typeof w.d === 'string' && w.d.startsWith(currentYearMonth)
+  );
 
   const monthAvg =
     monthWeights.length > 0
@@ -131,11 +145,12 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
 
   // Format full date in Spanish
   const formatFullDate = (dStr: string) => {
+    if (!dStr || typeof dStr !== 'string') return '';
     const parts = dStr.split('-');
     if (parts.length === 3) {
       const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const dayName = DIAS_SEMANA[(d.getDay() + 6) % 7];
-      const monthName = MESES[d.getMonth()];
+      const dayName = DIAS_SEMANA[(d.getDay() + 6) % 7] || '';
+      const monthName = MESES[d.getMonth()] || MESES[0];
       return `${dayName}, ${Number(parts[2])} de ${monthName} de ${parts[0]}`;
     }
     return dStr;
@@ -143,7 +158,8 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
 
   // Step days for consultation
   const stepConsultDay = (deltaDays: number) => {
-    const parts = consultDate.split('-').map(Number);
+    const safeDateStr = typeof consultDate === 'string' && consultDate.includes('-') ? consultDate : todayIso;
+    const parts = safeDateStr.split('-').map(Number);
     const d = new Date(parts[0], parts[1] - 1, parts[2]);
     d.setDate(d.getDate() + deltaDays);
     const newDateStr = toIsoDate(d);
@@ -227,22 +243,22 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
 
     if (historyFilter === 'month') {
       const ym = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-      list = list.filter((w) => w.d.startsWith(ym));
+      list = list.filter((w) => typeof w.d === 'string' && w.d.startsWith(ym));
     } else if (historyFilter === 'prev_month') {
       const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
       const ym = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-      list = list.filter((w) => w.d.startsWith(ym));
+      list = list.filter((w) => typeof w.d === 'string' && w.d.startsWith(ym));
     } else if (historyFilter === 'year') {
       const y = String(currentDate.getFullYear());
-      list = list.filter((w) => w.d.startsWith(y));
+      list = list.filter((w) => typeof w.d === 'string' && w.d.startsWith(y));
     }
 
     if (historySearch.trim()) {
       const query = historySearch.toLowerCase().trim();
       list = list.filter(
         (w) =>
-          w.d.includes(query) ||
-          w.d.split('-').reverse().join('/').includes(query) ||
+          (w.d || '').includes(query) ||
+          (w.d || '').split('-').reverse().join('/').includes(query) ||
           String(w.kg).includes(query) ||
           (w.notes && w.notes.toLowerCase().includes(query))
       );
@@ -256,17 +272,21 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
 
   const chartData = useMemo(() => {
     const ym = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-    const dataset = chartRange === 'month' ? sortedAll.filter((w) => w.d.startsWith(ym)) : sortedAll;
+    const dataset =
+      chartRange === 'month'
+        ? sortedAll.filter((w) => typeof w.d === 'string' && w.d.startsWith(ym))
+        : sortedAll;
     const target = settings.targetWeightKg || 74.0;
 
     return dataset.map((item) => {
-      const parts = item.d.split('-');
-      const dNum = parseInt(parts[2], 10);
-      const mNum = parseInt(parts[1], 10);
+      const parts = (item.d || '').split('-');
+      const dNum = parseInt(parts[2], 10) || 1;
+      const mNum = parseInt(parts[1], 10) || 1;
+      const mLabel = MESES[mNum - 1] || MESES[0];
       return {
         rawDate: item.d,
-        label: `${dNum} ${MESES[mNum - 1].slice(0, 3)}`,
-        fullDate: `${dNum} de ${MESES[mNum - 1]} de ${parts[0]}`,
+        label: `${dNum} ${mLabel.slice(0, 3)}`,
+        fullDate: `${dNum} de ${mLabel} de ${parts[0] || ''}`,
         kg: item.kg,
         target,
         notes: item.notes || '',
@@ -687,11 +707,9 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm(`¿Eliminar el registro de ${consultedEntry.kg} kg del día ${consultDate}?`)) {
-                          onDeleteWeight(consultDate);
-                        }
+                        onDeleteWeight(consultDate);
                       }}
-                      className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                      className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                       title="Eliminar este pesaje"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1276,11 +1294,9 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm(`¿Eliminar el pesaje de ${entry.kg} kg del ${entry.d}?`)) {
-                          onDeleteWeight(entry.d);
-                        }
+                        onDeleteWeight(entry.d);
                       }}
-                      className="p-1 rounded text-neutral-400 hover:text-rose-600 transition-colors"
+                      className="p-1 rounded text-neutral-400 hover:text-rose-600 transition-colors cursor-pointer"
                       title="Eliminar pesaje"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

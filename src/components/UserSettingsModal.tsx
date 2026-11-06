@@ -42,6 +42,7 @@ interface UserSettingsModalProps {
   onImportBackup?: (jsonStr: string) => void;
   onResetData?: () => void;
   onOpenPinModal?: () => void;
+  initialTab?: 'push' | 'language' | 'general' | 'security' | 'changelog';
 }
 
 export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
@@ -53,9 +54,12 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   onImportBackup,
   onResetData,
   onOpenPinModal,
+  initialTab,
 }) => {
   const currentLang = settings.language || 'es';
-  const [activeTab, setActiveTab] = useState<'push' | 'language' | 'general' | 'security' | 'changelog'>('push');
+  const [activeTab, setActiveTab] = useState<'push' | 'language' | 'general' | 'security' | 'changelog'>(
+    initialTab || 'push'
+  );
   const [confirmReset, setConfirmReset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -63,9 +67,10 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     {
       version: 'v2.5.0',
       date: 'Noviembre 2026',
-      badge: 'Nuevo',
-      title: 'Modo Enfoque y Eliminación Rápida con Deshacer',
+      badge: 'Actual',
+      title: 'Modo Enfoque, Eliminación Rápida con Deshacer y Registro de Cambios',
       items: [
+        'Registro de cambios (Changelog) integrado dentro del menú de Ajustes para consultar todas las novedades y mejoras implementadas desde el inicio.',
         'Filtro inteligente en la Vista de Lista para alternar entre tareas Pendientes (Activas), Completadas y Prioritarias con barra de progreso en tiempo real.',
         'Eliminación directa en 1 clic desde cualquier vista del calendario (Mes, Semana, Día y Lista) sin bloqueos de confirmación.',
         'Notificación flotante con botón "Deshacer" al eliminar una tarea programada para restaurarla al instante si se borró por error.',
@@ -75,10 +80,11 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       version: 'v2.4.0',
       date: 'Noviembre 2026',
       badge: 'Mejora',
-      title: 'Gráfico de Tendencia de Peso y Despliegue Android APK',
+      title: 'Gráfico de Tendencia de Peso y Despliegue Android APK / iOS PWA',
       items: [
         'Visualización interactiva con Recharts en Control de Peso para seguir la curva de evolución mensual comparada con tu meta de peso.',
         'Asistente técnico integrado con comandos de Capacitor y pasos de Android Studio para empaquetar la web app en un archivo APK instalable.',
+        'Guía paso a paso para añadir la aplicación a la pantalla de inicio en iOS (iPhone y iPad) desde Safari.',
       ],
     },
     {
@@ -97,8 +103,39 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       badge: 'Sistema',
       title: 'Notificaciones Web Push y Soporte Multi-idioma',
       items: [
-        'Panel de configuración Web Push con recordatorios personalizados para tareas y medicamentos, resumen matutino y modo No Molestar.',
-        'Cambio de idioma instantáneo en toda la interfaz (Español, Inglés, Francés, Alemán, Portugués, Italiano y Catalán).',
+        'Panel de configuración Web Push con recordatorios personalizados para tareas y medicamentos, resumen matutino, revisión nocturna y modo No Molestar.',
+        'Cambio de idioma instantáneo en toda la interfaz (Español, Inglés, Francés, Alemán, Portugués, Italiano, Catalán, Gallego y Euskera).',
+      ],
+    },
+    {
+      version: 'v2.1.0',
+      date: 'Octubre 2026',
+      badge: 'Funciones',
+      title: 'Diario Personal con PIN, Habit Tracker y Previsión Meteorológica',
+      items: [
+        'Diario Personal protegido con clave de seguridad de 4 dígitos, estados de ánimo, fotos, notas de voz y dibujo a mano alzada.',
+        'Seguimiento de hábitos diarios (Habit Tracker) con rachas, plantillas recomendadas y calendario semanal.',
+        'Widget meteorológico en vivo y banner semanal del tiempo para todas las capitales de provincia e islas de España y ciudades del mundo.',
+      ],
+    },
+    {
+      version: 'v2.0.0',
+      date: 'Septiembre 2026',
+      badge: 'Nube',
+      title: 'Sincronización en la Nube en Tiempo Real y Notas Multimedia',
+      items: [
+        'Sincronización multi-dispositivo en tiempo real con Firebase Auth (Google, Apple y correo electrónico) y Cloud Firestore.',
+        'Sección de Notas y Archivos multimedia independiente para cada pestaña (grabadora de voz con transcripción, pizarra de dibujo, enlaces y archivos PDF/imágenes).',
+      ],
+    },
+    {
+      version: 'v1.0.0',
+      date: 'Agosto 2026',
+      badge: 'Lanzamiento',
+      title: 'Lanzamiento Inicial de Mi Calendario de Tareas',
+      items: [
+        'Calendario interactivo con vistas de Mes, Semana, Día y Lista organizadas en 10 categorías especializadas.',
+        'Planificador de Menús Semanales con exportación de ingredientes a la Lista de Compras, Control de Medicación Diaria, Control de Peso con IMC y Finanzas y Balance mensual.',
       ],
     },
   ];
@@ -112,12 +149,15 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      if (initialTab) {
+        setActiveTab(initialTab);
+      }
       const supported = isPushNotificationSupported();
       setIsSupported(supported);
       setPermStatus(getNotificationPermissionStatus());
       setTestResult(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
 
@@ -152,9 +192,10 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
       } else {
         setTestResult({
           success: false,
-          msg: permStatus === 'denied'
-            ? t('push.deniedHelp', currentLang)
-            : 'No se pudo enviar la notificación. Verifica los permisos de tu navegador.',
+          msg:
+            permStatus === 'denied'
+              ? t('push.deniedHelp', currentLang)
+              : 'No se pudo enviar la notificación. Verifica los permisos de tu navegador.',
         });
       }
     } catch (e: any) {
@@ -199,7 +240,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
             title={t('common.close', currentLang)}
           >
             <X className="w-5 h-5" />
@@ -214,7 +255,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               setActiveTab('push');
               sounds.playClick();
             }}
-            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'push'
                 ? 'border-[#e8533a] text-[#e8533a]'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
@@ -233,7 +274,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               setActiveTab('language');
               sounds.playClick();
             }}
-            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'language'
                 ? 'border-[#e8533a] text-[#e8533a]'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
@@ -252,7 +293,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
               setActiveTab('general');
               sounds.playClick();
             }}
-            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeTab === 'general'
                 ? 'border-[#e8533a] text-[#e8533a]'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
@@ -362,7 +403,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                       <button
                         type="button"
                         onClick={handleRequestPermission}
-                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md transition-all shrink-0 active:scale-95"
+                        className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md transition-all shrink-0 active:scale-95 cursor-pointer"
                       >
                         {t('push.requestPerm', currentLang)}
                       </button>
@@ -649,7 +690,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                       type="button"
                       onClick={handleTestPush}
                       disabled={isTestingPush}
-                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 text-xs font-bold shadow-xs flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>{isTestingPush ? t('push.testing', currentLang) : t('push.testButton', currentLang)}</span>
@@ -664,7 +705,11 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                           : 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                       }`}
                     >
-                      {testResult.success ? <Check className="w-4 h-4 shrink-0 text-emerald-500" /> : <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />}
+                      {testResult.success ? (
+                        <Check className="w-4 h-4 shrink-0 text-emerald-500" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                      )}
                       <span>{testResult.msg}</span>
                     </div>
                   )}
@@ -740,7 +785,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onUpdateSettings({ theme: 'light' })}
-                    className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all ${
+                    className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                       settings.theme === 'light'
                         ? 'border-[#e8533a] bg-[#e8533a]/10 text-[#e8533a]'
                         : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -753,7 +798,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onUpdateSettings({ theme: 'dark' })}
-                    className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all ${
+                    className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                       settings.theme === 'dark'
                         ? 'border-[#e8533a] bg-[#e8533a]/10 text-[#e8533a]'
                         : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
@@ -776,8 +821,10 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => onUpdateSettings({ enableSound: !settings.enableSound })}
-                    className={`p-2 rounded-xl text-xs transition-colors ${
-                      settings.enableSound ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500'
+                    className={`p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                      settings.enableSound
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-neutral-200 dark:bg-neutral-800 text-neutral-500'
                     }`}
                   >
                     {settings.enableSound ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
@@ -834,7 +881,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={onExportBackup}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>{t('general.exportBackup', currentLang)}</span>
@@ -846,7 +893,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs font-semibold cursor-pointer"
                       >
                         <Upload className="w-3.5 h-3.5" />
                         <span>{t('general.importBackup', currentLang)}</span>
@@ -870,8 +917,8 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                     </>
                   )}
 
-                  {onResetData && (
-                    confirmReset ? (
+                  {onResetData &&
+                    (confirmReset ? (
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
@@ -901,8 +948,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>{t('general.resetData', currentLang)}</span>
                       </button>
-                    )
-                  )}
+                    ))}
                 </div>
               </div>
 
@@ -922,7 +968,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                       </span>
                     </div>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Consulta las últimas mejoras y funciones añadidas a la aplicación.
+                      Consulta todas las mejoras y funciones añadidas hasta la versión 2.5.0.
                     </p>
                   </div>
                 </div>
@@ -937,23 +983,27 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: SECURITY PIN */}
+          {/* TAB 4: SECURITY (DIARY 4-DIGIT PIN) */}
           {activeTab === 'security' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-[#1a1c29] border border-neutral-200 dark:border-neutral-800 space-y-2">
-                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-purple-500" />
-                  <span>{t('pin.title', currentLang)}</span>
-                </h3>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {t('pin.desc', currentLang)}
-                </p>
+              <div className="p-4 sm:p-5 rounded-2xl bg-neutral-50 dark:bg-[#1a1c29] border border-neutral-200 dark:border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-purple-500" />
+                      <span>{t('pin.title', currentLang)} (Diario Personal)</span>
+                    </h3>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      {t('pin.desc', currentLang)}
+                    </p>
+                  </div>
+                </div>
 
-                <div className="pt-3">
+                <div className="pt-2">
                   {settings.diaryPin ? (
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-xs px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-semibold">
-                        PIN Activado: ••••
+                        PIN del Diario Activo: ••••
                       </span>
                       {onOpenPinModal && (
                         <button
@@ -962,15 +1012,15 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                             onClose();
                             onOpenPinModal();
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold"
+                          className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold cursor-pointer"
                         >
                           {t('pin.configure', currentLang)}
                         </button>
                       )}
                       <button
                         type="button"
-                        onClick={() => onUpdateSettings({ diaryPin: undefined })}
-                        className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                        onClick={() => onUpdateSettings({ diaryPin: '' })}
+                        className="px-3 py-1.5 rounded-xl border border-neutral-300 dark:border-neutral-700 text-xs font-semibold hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                       >
                         {t('pin.remove', currentLang)}
                       </button>
@@ -984,7 +1034,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                             onClose();
                             onOpenPinModal();
                           }}
-                          className="px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md"
+                          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs cursor-pointer"
                         >
                           {t('pin.configure', currentLang)}
                         </button>
@@ -996,7 +1046,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
             </div>
           )}
 
-          {/* TAB 5: CHANGELOG (NOVEDADES) */}
+          {/* TAB 5: CHANGELOG (NOVEDADES v1.0.0 -> v2.5.0) */}
           {activeTab === 'changelog' && (
             <div className="space-y-5 animate-in fade-in duration-200">
               <div className="p-4 rounded-2xl bg-gradient-to-br from-[#e8533a]/10 via-amber-500/5 to-transparent border border-[#e8533a]/25 flex items-start gap-3">
@@ -1013,7 +1063,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                     </span>
                   </div>
                   <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5">
-                    Historial de las últimas funciones, mejoras de rendimiento y herramientas incorporadas en Mi Calendario de Tareas.
+                    Historial completo desde el lanzamiento inicial (v1.0.0) hasta la versión 2.5.0 de Mi Calendario de Tareas.
                   </p>
                 </div>
               </div>
@@ -1088,7 +1138,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md transition-all active:scale-95"
+            className="px-5 py-2.5 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
           >
             {t('common.done', currentLang)}
           </button>

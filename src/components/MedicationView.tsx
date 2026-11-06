@@ -65,13 +65,13 @@ export const MedicationView: React.FC<MedicationViewProps> = ({
   const recognitionRef = useRef<any>(null);
 
   const totalToday = medications.length;
-  const takenTodayCount = medications.filter((m) => m.taken[todayStr]).length;
+  const takenTodayCount = medications.filter((m) => Boolean(m?.taken?.[todayStr])).length;
   const adherencePercent = totalToday > 0 ? Math.round((takenTodayCount / totalToday) * 100) : 0;
 
   const handleToggle = (id: number) => {
     onToggleMedication(id);
     const m = medications.find((x) => x.id === id);
-    if (m && !m.taken[todayStr]) {
+    if (m && !m.taken?.[todayStr]) {
       sounds.playMedicationChime();
       if (takenTodayCount + 1 === totalToday) {
         confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
@@ -150,13 +150,11 @@ export const MedicationView: React.FC<MedicationViewProps> = ({
 
   // Delete ONLY the annotation of a medication
   const handleDeleteAnnotation = (med: Medication) => {
-    if (confirm(`¿Deseas eliminar las anotaciones de "${med.n}"?`)) {
-      const updated: Medication = {
-        ...med,
-        notes: undefined,
-      };
-      onUpdateMedication(updated);
-    }
+    const updated: Medication = {
+      ...med,
+      notes: '',
+    };
+    onUpdateMedication(updated);
   };
 
   // Voice Dictation
@@ -165,7 +163,6 @@ export const MedicationView: React.FC<MedicationViewProps> = ({
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Tu navegador no admite reconocimiento de voz.');
       return;
     }
 
@@ -426,9 +423,9 @@ export const MedicationView: React.FC<MedicationViewProps> = ({
         ) : (
           medications
             .slice()
-            .sort((a, b) => a.h.localeCompare(b.h))
+            .sort((a, b) => (a.h || '00:00').localeCompare(b.h || '00:00'))
             .map((med) => {
-              const isTakenToday = !!med.taken[todayStr];
+              const isTakenToday = Boolean(med.taken?.[todayStr]);
               const isInlineEditingThis = inlineNoteMedId === med.id;
 
               return (
@@ -505,9 +502,9 @@ export const MedicationView: React.FC<MedicationViewProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm(`¿Eliminar ${med.n} del control diario?`)) onDeleteMedication(med.id);
+                          onDeleteMedication(med.id);
                         }}
-                        className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                         title="Eliminar medicamento"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -720,9 +717,9 @@ export const MedicationView: React.FC<MedicationViewProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm('¿Vaciar la anotación?')) setEditNotes('');
+                          setEditNotes('');
                         }}
-                        className="text-[11px] text-rose-500 hover:underline"
+                        className="text-[11px] text-rose-500 hover:underline cursor-pointer"
                       >
                         Eliminar nota
                       </button>

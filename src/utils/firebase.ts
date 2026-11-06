@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import {
   getFirestore,
+  initializeFirestore,
   doc,
   setDoc,
   getDoc,
@@ -21,21 +22,63 @@ import {
   onSnapshot,
   deleteDoc,
   getDocFromServer,
+  Firestore,
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const isNewApp = !getApps().length;
+const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+function initDb(): Firestore {
+  try {
+    if (isNewApp) {
+      return initializeFirestore(
+        app,
+        { ignoreUndefinedProperties: true },
+        firebaseConfig.firestoreDatabaseId
+      );
+    }
+  } catch {
+    // Fallback if already initialized
+  }
+  return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+}
+
+export const db = initDb();
 
 export const googleProvider = new GoogleAuthProvider();
 export const appleProvider = new OAuthProvider('apple.com');
 
-// Test connection
+// Recursively remove undefined fields so Firestore setDoc never throws on undefined values
+export function cleanFirestoreData<T>(value: T): T {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item !== undefined)
+      .map((item) => cleanFirestoreData(item)) as unknown as T;
+  }
+  if (typeof value === 'object' && !(value instanceof Date)) {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) {
+        result[k] = cleanFirestoreData(v);
+      }
+    }
+    return result as T;
+  }
+  return value;
+}
+
+// Test connection on boot
 if (typeof window !== 'undefined') {
   getDocFromServer(doc(db, 'test', 'connection')).catch((err) => {
-    // Non-fatal, expected if rules deny or offline
+    if (err instanceof Error && err.message.includes('the client is offline')) {
+      console.error('Please check your Firebase configuration.');
+    }
   });
 }
 
@@ -57,6 +100,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
       email: auth.currentUser?.email,
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo:
+        auth.currentUser?.providerData?.map((provider) => ({
+          providerId: provider.providerId,
+          email: provider.email,
+        })) || [],
     },
     operationType,
     path,

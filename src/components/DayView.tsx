@@ -124,8 +124,8 @@ export const DayView: React.FC<DayViewProps> = ({
     const untimed: Task[] = [];
 
     dayTasks.forEach((t) => {
-      if (!t.h) {
-        untimed.push(t);
+      if (!t || !t.h || typeof t.h !== 'string') {
+        if (t) untimed.push(t);
         return;
       }
       const hourPrefix = t.h.split(':')[0] + ':00';

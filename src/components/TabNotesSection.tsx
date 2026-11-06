@@ -28,8 +28,8 @@ import {
   X,
   ListPlus,
 } from 'lucide-react';
-import { db, handleFirestoreError, OperationType } from '../utils/firebase';
-import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType, cleanFirestoreData } from '../utils/firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 
 interface TabNotesSectionProps {
@@ -137,6 +137,43 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const latestNoteRef = useRef<TabNoteData>(noteData);
+
+  useEffect(() => {
+    latestNoteRef.current = noteData;
+  }, [noteData]);
+
+  // Ensure active tab note is saved to localStorage and Firestore when closing browser or tab
+  useEffect(() => {
+    const flushCurrentTabNote = () => {
+      const current = latestNoteRef.current;
+      if (!current) return;
+      try {
+        localStorage.setItem(`tab_note_${tabKey}`, JSON.stringify(current));
+      } catch {}
+      if (user) {
+        setDoc(doc(db, 'users', user.uid, 'tab_notes', tabKey), cleanFirestoreData(current), { merge: true }).catch(
+          () => {}
+        );
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        flushCurrentTabNote();
+      }
+    };
+
+    window.addEventListener('beforeunload', flushCurrentTabNote);
+    window.addEventListener('pagehide', flushCurrentTabNote);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('beforeunload', flushCurrentTabNote);
+      window.removeEventListener('pagehide', flushCurrentTabNote);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [tabKey, user]);
 
   // Load and listen to notes on tab change (Real-time Firestore Multi-Device Sync)
   useEffect(() => {
@@ -212,7 +249,7 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
     // Save to Firestore if user logged in
     if (user) {
       try {
-        await setDoc(doc(db, 'users', user.uid, 'tab_notes', tabKey), dataWithTime);
+        await setDoc(doc(db, 'users', user.uid, 'tab_notes', tabKey), cleanFirestoreData(dataWithTime));
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/tab_notes/${tabKey}`);
       }
@@ -273,7 +310,6 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Tu navegador no soporta reconocimiento de voz continuo.');
       return;
     }
 
@@ -380,7 +416,6 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
       startSpeechRecognition();
     } catch (err) {
       console.error('Microphone access denied:', err);
-      alert('No se pudo acceder al micrófono. Por favor revisa los permisos de tu navegador.');
     }
   };
 
@@ -476,20 +511,21 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
     for (const file of filesArray) {
       // 5MB limit check
       if (file.size > 5 * 1024 * 1024) {
-        alert(`El archivo "${file.name}" supera el límite de 5 MB.`);
         continue;
       }
 
-      const isImage = file.type.startsWith('image/');
-      const isAudio = file.type.startsWith('audio/');
-      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const fileType = file.type || '';
+      const fileName = file.name || '';
+      const isImage = fileType.startsWith('image/');
+      const isAudio = fileType.startsWith('audio/');
+      const isPdf = fileType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
       const isDoc =
-        file.type.includes('word') ||
-        file.type.includes('document') ||
-        file.type.includes('text') ||
-        file.type.includes('sheet') ||
-        file.type.includes('excel') ||
-        file.name.match(/\.(docx?|xlsx?|txt|csv|rtf|json)$/i);
+        fileType.includes('word') ||
+        fileType.includes('document') ||
+        fileType.includes('text') ||
+        fileType.includes('sheet') ||
+        fileType.includes('excel') ||
+        Boolean(fileName.match(/\.(docx?|xlsx?|txt|csv|rtf|json)$/i));
 
       let dataUrl: string;
       if (isImage) {
@@ -1123,12 +1159,7 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
                           </div>
                         ) : att.type === 'pdf' ? (
                           <div
-                            onClick={() => {
-                              const w = window.open();
-                              w?.document.write(
-                                `<iframe src="${att.dataUrl}" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
-                              );
-                            }}
+                            onClick={() => setPreviewAttachment(att)}
                             className="w-full h-28 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200/60 flex flex-col items-center justify-center p-2 text-red-600 mb-2 cursor-pointer hover:bg-red-100/50 transition-colors"
                           >
                             <FileText className="w-8 h-8 mb-1" />
@@ -1331,13 +1362,19 @@ export const TabNotesSection: React.FC<TabNotesSectionProps> = ({ tabKey, tabTit
               </div>
             </div>
             <div className="p-4 flex items-center justify-center overflow-auto max-h-[75vh]">
-              {previewAttachment.type === 'image' && (
+              {previewAttachment.type === 'image' ? (
                 <img
                   src={previewAttachment.dataUrl}
                   alt={previewAttachment.name}
                   className="max-w-full max-h-[70vh] object-contain rounded-xl"
                 />
-              )}
+              ) : previewAttachment.type === 'pdf' ? (
+                <iframe
+                  src={previewAttachment.dataUrl}
+                  title={previewAttachment.name}
+                  className="w-[80vw] max-w-2xl h-[70vh] rounded-xl border-0"
+                />
+              ) : null}
             </div>
           </div>
         </div>

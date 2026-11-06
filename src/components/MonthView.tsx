@@ -70,8 +70,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
 
   const getDayTasks = (dateStr: string) => {
     return tasks
-      .filter((t) => t.d === dateStr)
-      .sort((a, b) => a.h.localeCompare(b.h));
+      .filter((t) => t && t.d === dateStr)
+      .sort((a, b) => (a.h || '00:00').localeCompare(b.h || '00:00'));
   };
 
   return (
@@ -109,9 +109,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
             const dateStr = toIsoDate(new Date(year, month, dayNum));
             const isToday = dateStr === todayStr;
             const dayTasks = getDayTasks(dateStr);
-            const dayJournal = journalEntries.find((j) => j.date === dateStr);
-            const dayWeight = weights.find((w) => w.d === dateStr);
-            const dayForecast = weatherData?.daily.find((d) => d.date === dateStr);
+            const dayJournal = journalEntries.find((j) => j && j.date === dateStr);
+            const dayWeight = weights.find((w) => w && w.d === dateStr);
+            const dayForecast = weatherData?.daily?.find((d) => d && d.date === dateStr);
             const maxTasks = dayJournal ? 2 : 3;
             const visibleTasks = dayTasks.slice(0, maxTasks);
             const overflowCount = dayTasks.length - maxTasks;

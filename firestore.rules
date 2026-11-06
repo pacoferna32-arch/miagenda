@@ -18,43 +18,56 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    // Connection health check endpoint
+    match /test/connection {
+      allow get: if true;
+    }
+
     // User profile
     match /users/{userId} {
-      allow read, write: if isOwner(userId) && isValidId(userId);
+      allow get, create, update, delete: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
 
       // Tasks subcollection
       match /tasks/{taskId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(taskId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(taskId);
       }
 
       // Medications subcollection
       match /medications/{medId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(medId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(medId);
       }
 
       // Weights subcollection
       match /weights/{weightId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(weightId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(weightId);
       }
 
       // Settings subcollection
       match /settings/{docId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(docId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(docId);
       }
 
       // Tab notes subcollection
       match /tab_notes/{noteId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(noteId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(noteId);
       }
 
       // Daily journal / diary subcollection
       match /journal/{entryId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(entryId);
       }
 
       // Habit tracker subcollection
       match /habits/{habitId} {
-        allow read, write: if isOwner(userId) && isValidId(userId) && isValidId(habitId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(userId) && isValidId(habitId);
       }
     }
   }

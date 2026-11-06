@@ -149,7 +149,8 @@ export const WeekView: React.FC<WeekViewProps> = ({
     );
 
     if (weeklyMealTasks.length === 0) {
-      alert('Primero añade algunos platos en el menú semanal.');
+      setNotification('Primero añade algunos platos en el menú semanal.');
+      setTimeout(() => setNotification(null), 3000);
       return;
     }
 
