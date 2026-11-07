@@ -34,6 +34,7 @@ interface WelcomeViewProps {
   onNavigateView: (view: 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits') => void;
   onToggleTaskDone: (taskId: number) => void;
   onOpenNewTaskModal: (date?: string) => void;
+  onOpenAndroidModal?: () => void;
 }
 
 export const WelcomeView: React.FC<WelcomeViewProps> = ({
@@ -45,6 +46,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
   onNavigateView,
   onToggleTaskDone,
   onOpenNewTaskModal,
+  onOpenAndroidModal,
 }) => {
   const [quote, setQuote] = useState<MotivationalQuote>(() => getRandomMotivationalQuote());
   const [isRotatingQuote, setIsRotatingQuote] = useState(false);
@@ -169,6 +171,18 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
                 <Settings className="w-3.5 h-3.5 text-neutral-300" />
                 <span>Editar Perfil</span>
               </button>
+
+              {onOpenAndroidModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAndroidModal}
+                  className="px-3.5 py-2 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 text-xs font-bold transition-all border border-emerald-400/40 active:scale-95 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Descargar APK oficial para instalar en Android"
+                >
+                  <span>🤖</span>
+                  <span>Descargar APK Android</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

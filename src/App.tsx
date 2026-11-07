@@ -1641,8 +1641,8 @@ export default function App() {
                 title="Instalar como app nativa en Android (APK / Capacitor)"
               >
                 <span>🤖</span>
-                <span className="hidden sm:inline">Instalar en Android</span>
-                <span className="sm:hidden">Android</span>
+                <span className="hidden sm:inline">Descargar APK Android</span>
+                <span className="sm:hidden">Descargar APK</span>
               </button>
             )}
 
@@ -1908,6 +1908,7 @@ export default function App() {
               }}
               onToggleTaskDone={handleToggleTask}
               onOpenNewTaskModal={(dStr) => handleOpenNewTask(dStr)}
+              onOpenAndroidModal={() => setIsAndroidModalOpen(true)}
             />
           )}
 
