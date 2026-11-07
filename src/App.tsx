@@ -26,6 +26,7 @@ import { ShoppingView } from './components/ShoppingView';
 import { JournalView } from './components/JournalView';
 import { HabitTrackerView } from './components/HabitTrackerView';
 import { WelcomeView } from './components/WelcomeView';
+import { UndatedTasksView } from './components/UndatedTasksView';
 import { TaskModal } from './components/TaskModal';
 import { ToastAlarms } from './components/ToastAlarms';
 import { AndroidInstallModal } from './components/AndroidInstallModal';
@@ -62,6 +63,7 @@ import {
   Globe,
   Crown,
   Sparkles,
+  Inbox,
 } from 'lucide-react';
 
 const INITIAL_TASKS_BY_ID = new Map<number, Task>(INITIAL_TASKS.map((item) => [item.id, item]));
@@ -104,8 +106,11 @@ export function normalizeTask(
 
   const base = fallback || INITIAL_TASKS_BY_ID.get(rawId);
 
+  const isUndated = obj.isUndated === true || obj.d === '' || obj.d === 'sin-fecha' || (!obj.d && Boolean(base?.isUndated));
   const rawDate = typeof obj.d === 'string' ? obj.d.trim().slice(0, 10) : '';
-  const validDate = isValidIsoDateString(rawDate)
+  const validDate = isUndated
+    ? ''
+    : isValidIsoDateString(rawDate)
     ? rawDate
     : base?.d && isValidIsoDateString(base.d)
     ? base.d
@@ -121,7 +126,7 @@ export function normalizeTask(
       : base?.t || '';
 
   // Discard orphan partial objects (e.g. { done: true }) that have no title, no date, and no matching base task
-  if (!validDate || !rawTitle) {
+  if ((!validDate && !isUndated) || !rawTitle) {
     return base ? { ...base, done: typeof obj.done === 'boolean' ? obj.done : base.done } : null;
   }
 
@@ -146,8 +151,9 @@ export function normalizeTask(
     id: rawId,
     t: rawTitle,
     c: validCat,
-    d: validDate,
-    h: validTime,
+    d: isUndated ? '' : validDate,
+    h: isUndated ? '' : validTime,
+    isUndated: isUndated || validDate === '',
     done: typeof obj.done === 'boolean' ? obj.done : Boolean(base?.done),
     n: typeof obj.n === 'string' ? obj.n : base?.n || '',
   };
@@ -553,7 +559,7 @@ export default function App() {
 
   const [currentCategory, setCurrentCategory] = useState<CategoryKey | 'all'>('all');
   const [activeView, setActiveView] = useState<
-    'welcome' | 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits'
+    'welcome' | 'month' | 'week' | 'day' | 'list' | 'undated' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits'
   >(() => (settings.showWelcomeOnStartup ?? true ? 'welcome' : 'month'));
 
   // Modals state
@@ -587,6 +593,7 @@ export default function App() {
     if (view === 'welcome') return 'Inicio y Bienvenida';
     if (view === 'day') return 'Calendario Día';
     if (view === 'week') return 'Calendario Semana';
+    if (view === 'undated') return 'Tareas Sin Fecha';
     if (view === 'menus') return 'Menús Semanales';
     if (view === 'habits') return 'Habit Tracker';
     if (view === 'journal') return 'Diario Personal';
@@ -1539,6 +1546,8 @@ export default function App() {
                     ? t('header.habitsTitle', currentLang)
                     : activeView === 'menus'
                     ? 'Menús Semanales'
+                    : activeView === 'undated'
+                    ? 'Tareas Sin Fecha'
                     : activeView === 'day'
                     ? t('header.dayTitle', currentLang)
                     : activeView === 'week'
@@ -1557,6 +1566,8 @@ export default function App() {
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {activeView === 'welcome'
                   ? `Hola de nuevo, ${settings.userName || 'Paco'} · Inspiración diaria y tareas`
+                  : activeView === 'undated'
+                  ? 'Bandeja de entrada y tareas pendientes para realizar sin fecha fija en el calendario'
                   : activeView === 'day'
                   ? `${getLocalizedDayName((currentDayDate.getDay() + 6) % 7, true, currentLang)}, ${currentDayDate.getDate()} de ${getLocalizedMonthName(currentDayDate.getMonth(), currentLang)} ${currentDayDate.getFullYear()}`
                   : `${getLocalizedMonthName(currentDate.getMonth(), currentLang)} ${currentDate.getFullYear()} · ${t('header.subtitle', currentLang)}`}
@@ -1566,7 +1577,7 @@ export default function App() {
 
           {/* Right Zone: View switchers & CTA buttons */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Calendar mode switcher buttons: Día, Semana, Mes, Lista */}
+            {/* Calendar mode switcher buttons: Día, Semana, Mes, Lista, Sin Fecha */}
             <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800/90 rounded-xl">
               <button
                 type="button"
@@ -1618,6 +1629,19 @@ export default function App() {
               >
                 <List className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{t('view.list', currentLang)}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveView('undated')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                  activeView === 'undated'
+                    ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs font-semibold'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
+                }`}
+              >
+                <Inbox className="w-3.5 h-3.5 text-orange-500" />
+                <span className="hidden sm:inline">Sin Fecha</span>
               </button>
             </div>
 
@@ -2010,6 +2034,45 @@ export default function App() {
             />
           )}
 
+          {activeView === 'undated' && (
+            <UndatedTasksView
+              tasks={visibleTasks}
+              onOpenTask={handleEditTask}
+              onToggleTask={handleToggleTask}
+              onDeleteTask={handleDeleteTask}
+              onAddTask={(prefilled) => {
+                setEditingTask(null);
+                setModalDefaultDate('sin-fecha');
+                setIsTaskModalOpen(true);
+              }}
+              onScheduleTask={(taskId, newDate, newTime) => {
+                const target = tasks.find((t) => t.id === taskId);
+                if (target) {
+                  handleSaveTask(
+                    {
+                      ...target,
+                      d: newDate,
+                      h: newTime || '10:00',
+                      isUndated: false,
+                    },
+                    taskId
+                  );
+                }
+              }}
+              onQuickAdd={(title, cat, priority) => {
+                handleSaveTask({
+                  t: title,
+                  c: cat,
+                  d: '',
+                  h: '',
+                  isUndated: true,
+                  n: '',
+                  priority,
+                });
+              }}
+            />
+          )}
+
           {activeView === 'menus' && (
             <WeekView
               currentWeekStart={currentWeekStart}
@@ -2239,12 +2302,14 @@ export default function App() {
         onClose={() => {
           setIsTaskModalOpen(false);
           setEditingTask(null);
+          setModalDefaultDate(undefined);
         }}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
         initialTask={editingTask}
         defaultCategory={currentCategory === 'all' ? 'recordatorios' : currentCategory}
-        defaultDate={modalDefaultDate}
+        defaultDate={modalDefaultDate === 'sin-fecha' ? undefined : modalDefaultDate}
+        defaultIsUndated={modalDefaultDate === 'sin-fecha'}
         onRequireAuth={() => {
           setAuthRequiredPrompt('Debes registrarte o iniciar sesión con Google, Apple o tu correo para guardar tareas y sincronizarlas.');
           setIsAuthModalOpen(true);

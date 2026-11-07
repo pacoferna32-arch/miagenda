@@ -257,6 +257,28 @@ export const INITIAL_TASKS: Task[] = [
     lugar: 'Clínica Dental Sonrisa',
     alarm: 60,
   },
+  {
+    id: 14,
+    t: 'Organizar armarios y donar ropa de temporada',
+    c: 'personales',
+    d: '',
+    h: '',
+    isUndated: true,
+    done: false,
+    n: 'Separar prendas que ya no se usan para donación y guardar ropa de invierno',
+    priority: 'normal',
+  },
+  {
+    id: 15,
+    t: 'Revisar suscripciones y servicios prescindibles',
+    c: 'finanzas',
+    d: '',
+    h: '',
+    isUndated: true,
+    done: false,
+    n: 'Comprobar cargos periódicos en el banco y dar de baja lo que no se use',
+    priority: 'alta',
+  },
 ];
 
 export const INITIAL_MEDICATIONS: Medication[] = [

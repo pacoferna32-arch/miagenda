@@ -16,6 +16,7 @@ import {
   Check,
   Navigation as NavIcon,
   Search,
+  Inbox,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -28,6 +29,7 @@ interface TaskModalProps {
   initialTask?: Task | null;
   defaultCategory?: CategoryKey;
   defaultDate?: string;
+  defaultIsUndated?: boolean;
   onRequireAuth?: () => void;
 }
 
@@ -39,11 +41,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   initialTask,
   defaultCategory = 'recordatorios',
   defaultDate,
+  defaultIsUndated = false,
   onRequireAuth,
 }) => {
   const { user } = useAuth();
   const [category, setCategory] = useState<CategoryKey>(defaultCategory);
   const [title, setTitle] = useState('');
+  const [isUndated, setIsUndated] = useState<boolean>(defaultIsUndated);
   const [date, setDate] = useState(defaultDate || toIsoDate(new Date()));
   const [time, setTime] = useState('10:00');
   const [notes, setNotes] = useState('');
@@ -77,8 +81,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     if (initialTask) {
       setCategory(initialTask.c);
       setTitle(initialTask.t);
-      setDate(initialTask.d);
-      setTime(initialTask.h);
+      const undated = initialTask.isUndated === true || !initialTask.d || initialTask.d === 'sin-fecha';
+      setIsUndated(undated);
+      setDate(undated ? '' : initialTask.d);
+      setTime(initialTask.h || '10:00');
       setNotes(initialTask.n || '');
       setPriority(initialTask.priority || 'normal');
       setInkData(initialTask.ink || null);
@@ -104,7 +110,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     } else {
       setCategory(defaultCategory);
       setTitle('');
-      setDate(defaultDate || toIsoDate(new Date()));
+      const undated = defaultIsUndated || defaultDate === 'sin-fecha' || defaultDate === '';
+      setIsUndated(undated);
+      setDate(undated ? '' : defaultDate || toIsoDate(new Date()));
       setTime(defaultCategory === 'menus' ? MEAL_HOURS.almuerzo : '10:00');
       setNotes('');
       setPriority('normal');
@@ -176,12 +184,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       {
         t: finalTitle,
         c: category,
-        d: date,
-        h: time,
+        d: isUndated ? '' : date,
+        h: isUndated ? '' : time,
+        isUndated,
         n: notes.trim(),
         priority,
         ink: inkData,
-        alarm: alarmMinutes,
+        alarm: isUndated ? null : alarmMinutes,
         fin: category === 'finanzas' ? finType : null,
         concepto: category === 'finanzas' ? finConcept.trim() : undefined,
         cant: category === 'finanzas' ? parsedAmount : null,
@@ -309,47 +318,85 @@ export const TaskModal: React.FC<TaskModalProps> = ({
           </div>
 
           {/* Date, Time & Priority Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-                Fecha
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                Programación
               </label>
-              <div className="relative">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-[#e8533a] hover:opacity-90 select-none">
                 <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
-                  required
+                  type="checkbox"
+                  checked={isUndated}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsUndated(checked);
+                    if (checked) {
+                      setDate('');
+                      setTime('');
+                    } else {
+                      setDate(defaultDate || toIsoDate(new Date()));
+                      setTime('10:00');
+                    }
+                  }}
+                  className="w-3.5 h-3.5 rounded text-[#e8533a] accent-[#e8533a] cursor-pointer"
                 />
+                <span>Sin fecha (Bandeja / Backlog)</span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {isUndated ? (
+                <div className="sm:col-span-2 p-2.5 rounded-xl border border-dashed border-orange-300 dark:border-orange-800 bg-orange-50/70 dark:bg-orange-950/20 flex items-center gap-2.5 text-xs text-orange-900 dark:text-orange-200">
+                  <Inbox className="w-4 h-4 text-orange-500 shrink-0" />
+                  <span>
+                    Esta tarea se guardará en <b>"Tareas Sin Fecha"</b> para hacerla cuando tengas disponibilidad.
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
+                      Fecha
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
+                        required={!isUndated}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
+                      Hora
+                    </label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
+                  Prioridad
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as PriorityLevel)}
+                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="alta">Alta ⚠️</option>
+                  <option value="urgente">Urgente 🔥</option>
+                </select>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-                Hora
-              </label>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-                Prioridad
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-                className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
-              >
-                <option value="normal">Normal</option>
-                <option value="alta">Alta ⚠️</option>
-                <option value="urgente">Urgente 🔥</option>
-              </select>
             </div>
           </div>
 

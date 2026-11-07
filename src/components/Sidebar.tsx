@@ -26,6 +26,7 @@ import {
   Crown,
   Sparkles,
   Home,
+  Inbox,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { t } from '../utils/i18n';
@@ -35,8 +36,8 @@ import { UserAvatar } from './UserAvatar';
 interface SidebarProps {
   currentCategory: CategoryKey | 'all';
   onSelectCategory: (cat: CategoryKey | 'all') => void;
-  activeView: 'welcome' | 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits';
-  onSelectView: (view: 'welcome' | 'month' | 'week' | 'day' | 'list' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits') => void;
+  activeView: 'welcome' | 'month' | 'week' | 'day' | 'list' | 'undated' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits';
+  onSelectView: (view: 'welcome' | 'month' | 'week' | 'day' | 'list' | 'undated' | 'menus' | 'finanzas' | 'medication' | 'weight' | 'shopping' | 'journal' | 'habits') => void;
   tasks: Task[];
   medications: Medication[];
   habitsCount?: number;
@@ -86,6 +87,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const monthTasks = tasks.filter(
     (t) => t && typeof t.d === 'string' && t.d.startsWith(currentYearMonth) && !t.done
   );
+  const undatedTasksCount = tasks.filter(
+    (t) => t && (t.isUndated || !t.d || t.d === 'sin-fecha') && !t.done
+  ).length;
 
   const getCategoryCount = (key: CategoryKey) => {
     return monthTasks.filter((t) => t.c === key).length;
@@ -331,6 +335,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
               >
                 <CheckSquare className="w-4 h-4 shrink-0" />
                 <span className="flex-1 text-left">Lista de Tareas</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectCategory('all');
+                  onSelectView('undated');
+                  onCloseMobile();
+                }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeView === 'undated' && currentCategory === 'all'
+                    ? 'bg-[#e8533a] text-white shadow-sm font-semibold'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Inbox className="w-4 h-4 shrink-0 text-orange-400" />
+                <span className="flex-1 text-left">Tareas Sin Fecha</span>
+                {undatedTasksCount > 0 && (
+                  <span className="text-[10px] tabular-nums bg-orange-500/30 text-orange-200 px-1.5 py-0.5 rounded-full font-mono font-bold">
+                    {undatedTasksCount}
+                  </span>
+                )}
               </button>
 
               <button

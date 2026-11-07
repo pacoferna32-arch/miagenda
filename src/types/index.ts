@@ -35,6 +35,7 @@ export interface Task {
   h: string; // HH:MM
   done: boolean;
   n: string; // Notes
+  isUndated?: boolean; // Tarea sin fecha programada
   priority?: PriorityLevel;
   ink?: string | null; // Data URL of drawing
   alarm?: number | null; // Minutes before
