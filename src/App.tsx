@@ -1505,6 +1505,13 @@ export default function App() {
         medications={medications}
         habitsCount={habits.length}
         currentDate={currentDate}
+        onSelectDate={(newDate) => setCurrentDate(newDate)}
+        currentDayDate={currentDayDate}
+        onSelectDay={(dayDate) => {
+          setCurrentDayDate(dayDate);
+          setCurrentDate(new Date(dayDate.getFullYear(), dayDate.getMonth(), 1));
+          setActiveView('day');
+        }}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}
         onExportBackup={handleExportBackup}

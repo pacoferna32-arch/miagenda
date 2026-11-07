@@ -33,6 +33,7 @@ import { useAuth } from '../context/AuthContext';
 import { t } from '../utils/i18n';
 import { AdBanner } from './AdBanner';
 import { UserAvatar } from './UserAvatar';
+import { MiniMonthlyCalendar } from './MiniMonthlyCalendar';
 
 interface SidebarProps {
   currentCategory: CategoryKey | 'all';
@@ -43,6 +44,9 @@ interface SidebarProps {
   medications: Medication[];
   habitsCount?: number;
   currentDate: Date;
+  onSelectDate?: (date: Date) => void;
+  currentDayDate?: Date;
+  onSelectDay?: (date: Date) => void;
   settings: UserSettings;
   onUpdateSettings: (settings: Partial<UserSettings>) => void;
   onExportBackup: () => void;
@@ -67,6 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   medications,
   habitsCount,
   currentDate,
+  onSelectDate,
+  currentDayDate,
+  onSelectDay,
   settings,
   onUpdateSettings,
   onExportBackup,
@@ -245,7 +252,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Scrollable Navigation */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-5">
+        <div className="flex-1 overflow-y-auto p-3 space-y-4">
+          {/* Mini Calendario Mensual */}
+          <div>
+            <MiniMonthlyCalendar
+              currentDate={currentDate}
+              onSelectDate={(date) => {
+                if (onSelectDate) onSelectDate(date);
+              }}
+              currentDayDate={currentDayDate}
+              onSelectDay={(dayDate) => {
+                if (onSelectDay) {
+                  onSelectDay(dayDate);
+                } else if (onSelectDate) {
+                  onSelectDate(dayDate);
+                }
+                onSelectView('day');
+                onCloseMobile();
+              }}
+              tasks={tasks}
+              language={currentLang}
+              onSelectView={(v) => {
+                onSelectView(v);
+                onCloseMobile();
+              }}
+            />
+          </div>
+
           {/* Main Views */}
           <div>
             <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1.5">
