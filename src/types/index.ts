@@ -116,10 +116,12 @@ export interface PremiumSubscription {
   isPremium: boolean;
   type: 'lifetime';
   purchasedAt?: string;
-  paymentMethod?: 'card' | 'transfer';
+  paymentMethod?: 'card' | 'transfer' | 'paypal';
   currency?: string;
   amount?: number;
   transactionRef?: string;
+  paypalEmail?: string;
+  paypalOrderId?: string;
 }
 
 export interface UserSettings {

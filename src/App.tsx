@@ -2337,6 +2337,7 @@ export default function App() {
         isOpen={isSubscriptionModalOpen}
         onClose={() => setIsSubscriptionModalOpen(false)}
         settings={settings}
+        userEmail={user?.email || ''}
         onActivatePremium={handleActivatePremium}
       />
 
