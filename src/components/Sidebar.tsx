@@ -573,52 +573,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Categories Filter */}
-          <div>
-            <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1.5">
-              Pestañas por Categoría
-            </h4>
-            <div className="space-y-0.5">
-              {CATEGORIES.map((cat) => {
-                const count = getCategoryCount(cat.k);
-                const isSelected = currentCategory === cat.k && (activeView === 'month' || (cat.k === 'habitos' && activeView === 'habits'));
-
-                return (
-                  <button
-                    key={cat.k}
-                    type="button"
-                    onClick={() => {
-                      onSelectCategory(cat.k);
-                      if (cat.k === 'menus') {
-                        onSelectView('menus');
-                      } else if (cat.k === 'finanzas') {
-                        onSelectView('finanzas');
-                      } else if (cat.k === 'diario') {
-                        onSelectView('journal');
-                      } else if (cat.k === 'habitos') {
-                        onSelectView('habits');
-                      } else {
-                        onSelectView('month');
-                      }
-                      onCloseMobile();
-                    }}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-white/15 text-white font-semibold'
-                        : 'text-white/70 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.c }} />
-                    <span className="text-sm shrink-0">{cat.e}</span>
-                    <span className="flex-1 text-left truncate">{cat.n}</span>
-                    {count > 0 && (
-                      <span className="text-[10px] tabular-nums font-mono opacity-60">
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+          {/* Categorías (Ahora en el panel derecho de la pantalla) */}
+          <div className="pt-1 border-t border-white/10">
+            <div className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs text-white/70">
+              <span className="flex items-center gap-2 font-medium">
+                <span className="text-sm">🏷️</span>
+                <span>Pestañas Categorías</span>
+              </span>
+              <span className="text-[10px] text-amber-300 font-bold bg-amber-400/20 px-2 py-0.5 rounded-full">
+                A la derecha →
+              </span>
             </div>
           </div>
 

@@ -37,6 +37,7 @@ import { TabNotesSection } from './components/TabNotesSection';
 import { DiaryPinModal } from './components/DiaryPinModal';
 import { UserSettingsModal } from './components/UserSettingsModal';
 import { ThemeSelectorModal } from './components/ThemeSelectorModal';
+import { RightCategoryBar } from './components/RightCategoryBar';
 import { applyThemeToDocument } from './utils/theme';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdBanner } from './components/AdBanner';
@@ -67,6 +68,7 @@ import {
   Sparkles,
   Inbox,
   Palette,
+  Layers,
 } from 'lucide-react';
 
 const INITIAL_TASKS_BY_ID = new Map<number, Task>(INITIAL_TASKS.map((item) => [item.id, item]));
@@ -584,6 +586,7 @@ export default function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileRightBarOpen, setMobileRightBarOpen] = useState(false);
 
   // 4-Digit Security PIN state for Diario Personal
   const [isDiaryUnlocked, setIsDiaryUnlocked] = useState(false);
@@ -1797,6 +1800,17 @@ export default function App() {
               <span>{t('header.newTask', currentLang)}</span>
             </button>
 
+            {/* Mobile / Tablet Button to open Right Category Tabs Drawer */}
+            <button
+              type="button"
+              onClick={() => setMobileRightBarOpen(true)}
+              className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold shadow-2xs cursor-pointer shrink-0"
+              title="Abrir pestañas por categoría"
+            >
+              <Layers className="w-4 h-4 text-[#e8533a]" />
+              <span className="hidden sm:inline">Pestañas</span>
+            </button>
+
             {/* Authenticated User Pill */}
             <div className="flex items-center gap-1.5 p-1 pl-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#161824] shadow-2xs">
               <button
@@ -2320,6 +2334,31 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Right-Side Category Divider Tabs */}
+      <RightCategoryBar
+        currentCategory={currentCategory}
+        onSelectCategory={(cat) => {
+          setCurrentCategory(cat);
+          if (cat === 'menus') setActiveView('menus');
+          else if (cat === 'finanzas') setActiveView('finanzas');
+          else if (cat === 'habitos') setActiveView('habits');
+          else if (cat === 'diario') {
+            setActiveView('journal');
+            if (!isDiaryUnlocked) {
+              setDiaryPinModalMode('unlock');
+              setIsDiaryPinModalOpen(true);
+            }
+          } else if (['welcome', 'menus', 'finanzas', 'journal', 'habits'].includes(activeView)) {
+            setActiveView('month');
+          }
+        }}
+        tasks={safeTasks}
+        currentDate={currentDate}
+        activeView={activeView}
+        isOpenMobile={mobileRightBarOpen}
+        onCloseMobile={() => setMobileRightBarOpen(false)}
+      />
 
       {/* Task Creation & Edition Modal */}
       <TaskModal
