@@ -26,3 +26,66 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(150, 150, 160, 0.45);
 }
+
+/* High Contrast Theme (WCAG AAA) */
+html.high-contrast {
+  color-scheme: dark;
+}
+html.high-contrast body,
+html.high-contrast .app-shell-root,
+html.high-contrast main {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+html.high-contrast .card-surface,
+html.high-contrast .bg-white,
+html.high-contrast .dark\:bg-\[\#151722\],
+html.high-contrast .dark\:bg-\[\#161824\],
+html.high-contrast .dark\:bg-\[\#1a1c29\] {
+  background-color: #0d0d12 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+html.high-contrast button.bg-\[\#e8533a\],
+html.high-contrast .bg-gradient-to-r.from-\[\#e8533a\],
+html.high-contrast .btn-primary-action {
+  background: #ffff00 !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+  border: 2px solid #ffffff !important;
+}
+html.high-contrast a,
+html.high-contrast .text-\[\#e8533a\] {
+  color: #ffff00 !important;
+}
+
+/* Sepia Theme */
+html.theme-sepia body,
+html.theme-sepia .app-shell-root {
+  background-color: #fbf0d9 !important;
+  color: #291e14 !important;
+}
+html.theme-sepia .bg-white,
+html.theme-sepia .dark\:bg-\[\#151722\] {
+  background-color: #f5e6c8 !important;
+  border-color: #dcc69f !important;
+}
+html.theme-sepia button.bg-\[\#e8533a\],
+html.theme-sepia .bg-gradient-to-r.from-\[\#e8533a\] {
+  background: #c05621 !important;
+  color: #ffffff !important;
+}
+
+/* Custom Theme Dynamic Variables */
+html.theme-custom body,
+html.theme-custom .app-shell-root {
+  background-color: var(--app-bg) !important;
+  color: var(--app-text) !important;
+}
+html.theme-custom .card-surface {
+  background-color: var(--app-surface) !important;
+}
+html.theme-custom .btn-primary-action {
+  background-color: var(--app-interactive) !important;
+  color: var(--app-interactive-text) !important;
+}

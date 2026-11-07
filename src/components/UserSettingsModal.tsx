@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { UserSettings, AppLanguage, PushNotificationSettings } from '../types';
+import { UserSettings, AppLanguage, PushNotificationSettings, ThemeMode, CustomThemeColors } from '../types';
 import { DEFAULT_PUSH_SETTINGS } from '../utils/constants';
 import { SUPPORTED_LANGUAGES, t } from '../utils/i18n';
 import {
@@ -46,9 +46,19 @@ import {
   Camera,
   Trash2,
   ExternalLink,
+  Palette,
+  Contrast,
+  BookOpen,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { PRESET_AVATARS, getTimeGreeting } from '../utils/motivationalQuotes';
+import {
+  THEME_PRESETS,
+  DEFAULT_CUSTOM_COLORS,
+  INSPIRATION_PALETTES,
+  isColorDark,
+  getContrastText,
+} from '../utils/theme';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -59,7 +69,7 @@ interface UserSettingsModalProps {
   onImportBackup?: (jsonStr: string) => void;
   onResetData?: () => void;
   onOpenPinModal?: () => void;
-  initialTab?: 'profile' | 'push' | 'language' | 'general' | 'security';
+  initialTab?: 'profile' | 'themes' | 'push' | 'language' | 'general' | 'security';
   onOpenWelcomeView?: () => void;
 }
 
@@ -76,10 +86,20 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   onOpenWelcomeView,
 }) => {
   const currentLang = settings.language || 'es';
-  const [activeTab, setActiveTab] = useState<'profile' | 'push' | 'language' | 'general' | 'security'>(
+  const [activeTab, setActiveTab] = useState<'profile' | 'themes' | 'push' | 'language' | 'general' | 'security'>(
     initialTab || 'profile'
   );
   const [confirmReset, setConfirmReset] = useState(false);
+  const [customColors, setCustomColors] = useState<CustomThemeColors>(() => {
+    return settings.customThemeColors || DEFAULT_CUSTOM_COLORS;
+  });
+
+  useEffect(() => {
+    if (settings.customThemeColors) {
+      setCustomColors(settings.customThemeColors);
+    }
+  }, [settings.customThemeColors]);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -365,6 +385,29 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
           >
             <User className="w-4 h-4" />
             <span>Perfil & Bienvenida</span>
+          </button>
+
+          {/* TAB: Temas y Colores */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('themes');
+              sounds.playClick();
+            }}
+            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              activeTab === 'themes'
+                ? 'border-[#e8533a] text-[#e8533a]'
+                : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-300'
+            }`}
+          >
+            <Palette className="w-4 h-4 text-amber-500" />
+            <span>Temas y Colores</span>
+            {settings.theme === 'custom' && (
+              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+            )}
+            {settings.theme === 'high-contrast' && (
+              <span className="text-[9px] bg-yellow-400 text-black px-1 rounded font-bold">AAA</span>
+            )}
           </button>
 
           <button
@@ -702,6 +745,403 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   />
                   <div className="w-11 h-6 bg-neutral-300 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#e8533a]"></div>
                 </label>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: TEMAS Y COLORES */}
+          {activeTab === 'themes' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header Description */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-amber-500 text-white shadow-xs">
+                    <Palette className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                      Selector de Temas y Paletas de Color
+                    </h3>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Elige entre paletas predefinidas optimizadas (incluyendo Alto Contraste accesible WCAG AAA) o personaliza cada color de la interfaz.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECCIÓN 1: PALETAS PREDEFINIDAS */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                    Paletas Predefinidas
+                  </h4>
+                  <span className="text-[11px] text-neutral-400">
+                    {THEME_PRESETS.length} temas disponibles
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {THEME_PRESETS.map((preset) => {
+                    const isSelected = settings.theme === preset.id;
+                    const presetIcons: Record<string, React.ReactNode> = {
+                      light: <Sun className="w-5 h-5 text-amber-500" />,
+                      dark: <Moon className="w-5 h-5 text-sky-400" />,
+                      'high-contrast': <Contrast className="w-5 h-5 text-yellow-400" />,
+                      sepia: <BookOpen className="w-5 h-5 text-amber-700" />,
+                    };
+
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          onUpdateSettings({ theme: preset.id });
+                        }}
+                        className={`p-4 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-3 cursor-pointer ${
+                          isSelected
+                            ? 'border-[#e8533a] ring-2 ring-[#e8533a]/30 shadow-md bg-white dark:bg-[#1a1c29]'
+                            : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 bg-neutral-50/60 dark:bg-[#151722]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 shrink-0">
+                              {presetIcons[preset.id] || <Palette className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-neutral-900 dark:text-white">
+                                  {preset.name}
+                                </span>
+                                {preset.id === 'high-contrast' && (
+                                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded-sm bg-yellow-400 text-black">
+                                    WCAG AAA
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">
+                                {preset.desc}
+                              </p>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <span className="p-1 rounded-full bg-[#e8533a] text-white shrink-0">
+                              <Check className="w-3.5 h-3.5" />
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Visual Color Preview Bars */}
+                        <div
+                          className="p-2.5 rounded-xl border flex items-center justify-between gap-2"
+                          style={{
+                            backgroundColor: preset.bg,
+                            borderColor: preset.border,
+                          }}
+                        >
+                          <span
+                            className="text-xs font-semibold px-2 py-0.5 rounded"
+                            style={{
+                              color: preset.text,
+                              backgroundColor: preset.surface,
+                            }}
+                          >
+                            Texto de muestra
+                          </span>
+
+                          <span
+                            className="text-xs font-bold px-2 py-1 rounded-lg shrink-0 shadow-2xs"
+                            style={{
+                              backgroundColor: preset.interactive,
+                              color: preset.contrastText,
+                            }}
+                          >
+                            Botón
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECCIÓN 2: COLORES PERSONALIZADOS */}
+              <div className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#1a1c29] space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-800 pb-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <Sliders className="w-4 h-4 text-[#e8533a]" />
+                      <span>Colores Personalizados a Medida</span>
+                      {settings.theme === 'custom' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold">
+                          Activo
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                      Personaliza libremente el fondo, el texto y los elementos interactivos.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sounds.playClick();
+                        setCustomColors(DEFAULT_CUSTOM_COLORS);
+                        onUpdateSettings({
+                          theme: 'custom',
+                          customThemeColors: DEFAULT_CUSTOM_COLORS,
+                        });
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 flex items-center gap-1 cursor-pointer"
+                      title="Restablecer a valores iniciales"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Restablecer</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inspiration Quick Palettes */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Inspiración Rápida de Paletas</span>
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    {INSPIRATION_PALETTES.map((pal) => {
+                      const paletteColors: CustomThemeColors = {
+                        bg: pal.bg,
+                        text: pal.text,
+                        interactive: pal.interactive,
+                        surface: isColorDark(pal.bg) ? '#1f2438' : '#ffffff',
+                        border: pal.interactive + '40',
+                      };
+                      return (
+                        <button
+                          key={pal.name}
+                          type="button"
+                          onClick={() => {
+                            sounds.playClick();
+                            setCustomColors(paletteColors);
+                            onUpdateSettings({
+                              theme: 'custom',
+                              customThemeColors: paletteColors,
+                            });
+                          }}
+                          className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-500 bg-neutral-50 dark:bg-neutral-800/60 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                        >
+                          <div className="flex items-center gap-1 mb-1.5">
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0"
+                              style={{ backgroundColor: pal.bg }}
+                            />
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0"
+                              style={{ backgroundColor: pal.text }}
+                            />
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0"
+                              style={{ backgroundColor: pal.interactive }}
+                            />
+                          </div>
+                          <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200 truncate block">
+                            {pal.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3 Main Color Controls: Fondo, Texto, Interactivo */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* 1. Fondo */}
+                  <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 space-y-2">
+                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+                      Color de Fondo (Background)
+                    </label>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      Lienzo y base de la app
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customColors.bg}
+                        onChange={(e) => {
+                          const updated = { ...customColors, bg: e.target.value };
+                          setCustomColors(updated);
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: updated,
+                          });
+                        }}
+                        className="w-10 h-10 rounded-xl cursor-pointer border border-neutral-300 dark:border-neutral-700 p-0.5 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={customColors.bg}
+                        onChange={(e) => {
+                          const updated = { ...customColors, bg: e.target.value };
+                          setCustomColors(updated);
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: updated,
+                          });
+                        }}
+                        className="flex-1 px-2.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-mono font-bold uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. Texto */}
+                  <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 space-y-2">
+                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+                      Color del Texto (Text)
+                    </label>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      Títulos, párrafos y lectura
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customColors.text}
+                        onChange={(e) => {
+                          const updated = { ...customColors, text: e.target.value };
+                          setCustomColors(updated);
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: updated,
+                          });
+                        }}
+                        className="w-10 h-10 rounded-xl cursor-pointer border border-neutral-300 dark:border-neutral-700 p-0.5 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={customColors.text}
+                        onChange={(e) => {
+                          const updated = { ...customColors, text: e.target.value };
+                          setCustomColors(updated);
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: updated,
+                          });
+                        }}
+                        className="flex-1 px-2.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-mono font-bold uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. Interactivo / Botones */}
+                  <div className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 space-y-2">
+                    <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 block">
+                      Elementos Interactivos (Buttons)
+                    </label>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      Botones, acentos y llamadas
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customColors.interactive}
+                        onChange={(e) => {
+                          const updated = { ...customColors, interactive: e.target.value };
+                          setCustomColors(updated);
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: updated,
+                          });
+                        }}
+                        className="w-10 h-10 rounded-xl cursor-pointer border border-neutral-300 dark:border-neutral-700 p-0.5 bg-white"
+                      />
+                      <input
+                        type="text"
+                        value={customColors.interactive}
+                        onChange={(e) => {
+                          const updated = { ...customColors, interactive: e.target.value };
+                          setCustomColors(updated);
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: updated,
+                          });
+                        }}
+                        className="flex-1 px-2.5 py-2 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-mono font-bold uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vista Previa Interactiva en Vivo */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
+                    Vista Previa en Tiempo Real de tu Tema
+                  </span>
+                  <div
+                    className="p-4 sm:p-5 rounded-2xl border transition-all duration-200 shadow-md space-y-3"
+                    style={{
+                      backgroundColor: customColors.bg,
+                      color: customColors.text,
+                      borderColor: customColors.interactive + '40',
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-3 h-3 rounded-full inline-block"
+                          style={{ backgroundColor: customColors.interactive }}
+                        />
+                        <span className="text-xs font-bold opacity-80 uppercase tracking-wider">
+                          Mi Agenda · Vista Previa
+                        </span>
+                      </div>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: customColors.interactive + '25',
+                          color: customColors.interactive,
+                        }}
+                      >
+                        En vivo
+                      </span>
+                    </div>
+
+                    <div>
+                      <h5 className="text-base sm:text-lg font-serif font-bold">
+                        Reunión estratégica & Plan del día
+                      </h5>
+                      <p className="text-xs opacity-75 mt-0.5">
+                        Esta tarjeta refleja instantáneamente tus elecciones de fondo, tipografía y elementos interactivos.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-current/10">
+                      <span className="text-xs opacity-70">
+                        Contraste: {isColorDark(customColors.bg) ? 'Modo Oscuro Personalizado' : 'Modo Claro Personalizado'}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sounds.playSuccessChime();
+                          onUpdateSettings({
+                            theme: 'custom',
+                            customThemeColors: customColors,
+                          });
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-transform active:scale-95 cursor-pointer"
+                        style={{
+                          backgroundColor: customColors.interactive,
+                          color: getContrastText(customColors.interactive),
+                        }}
+                      >
+                        {settings.theme === 'custom' ? '✓ Tema Aplicado' : 'Aplicar Este Tema'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -1242,32 +1682,65 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
                   {t('general.appearance', currentLang)}
                 </h3>
-
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
-                    onClick={() => onUpdateSettings({ theme: 'light' })}
-                    className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                    onClick={() => {
+                      sounds.playClick();
+                      onUpdateSettings({ theme: 'light' });
+                    }}
+                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
                       settings.theme === 'light'
                         ? 'border-[#e8533a] bg-[#e8533a]/10 text-[#e8533a]'
                         : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
                     }`}
                   >
-                    <Sun className="w-4 h-4 text-amber-500" />
+                    <Sun className="w-3.5 h-3.5 text-amber-500" />
                     <span>{t('general.lightMode', currentLang)}</span>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => onUpdateSettings({ theme: 'dark' })}
-                    className={`p-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                    onClick={() => {
+                      sounds.playClick();
+                      onUpdateSettings({ theme: 'dark' });
+                    }}
+                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
                       settings.theme === 'dark'
                         ? 'border-[#e8533a] bg-[#e8533a]/10 text-[#e8533a]'
                         : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
                     }`}
                   >
-                    <Moon className="w-4 h-4 text-sky-400" />
+                    <Moon className="w-3.5 h-3.5 text-sky-400" />
                     <span>{t('general.darkMode', currentLang)}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sounds.playClick();
+                      onUpdateSettings({ theme: 'high-contrast' });
+                    }}
+                    className={`p-2.5 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+                      settings.theme === 'high-contrast'
+                        ? 'border-[#e8533a] bg-[#e8533a]/10 text-[#e8533a]'
+                        : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400'
+                    }`}
+                  >
+                    <Contrast className="w-3.5 h-3.5 text-yellow-400" />
+                    <span>Alto Contraste</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sounds.playClick();
+                      setActiveTab('themes');
+                    }}
+                    className="p-2.5 rounded-xl border border-dashed border-amber-400 dark:border-amber-600 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <Palette className="w-3.5 h-3.5" />
+                    <span>Personalizar →</span>
                   </button>
                 </div>
 

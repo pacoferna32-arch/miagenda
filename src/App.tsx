@@ -36,6 +36,8 @@ import { AuthModal } from './components/AuthModal';
 import { TabNotesSection } from './components/TabNotesSection';
 import { DiaryPinModal } from './components/DiaryPinModal';
 import { UserSettingsModal } from './components/UserSettingsModal';
+import { ThemeSelectorModal } from './components/ThemeSelectorModal';
+import { applyThemeToDocument } from './utils/theme';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdBanner } from './components/AdBanner';
 import { WeatherWidget, WeatherWeekBanner } from './components/WeatherWidget';
@@ -64,6 +66,7 @@ import {
   Crown,
   Sparkles,
   Inbox,
+  Palette,
 } from 'lucide-react';
 
 const INITIAL_TASKS_BY_ID = new Map<number, Task>(INITIAL_TASKS.map((item) => [item.id, item]));
@@ -512,10 +515,14 @@ function loadInitialSettings(): UserSettings {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
+        const validThemes = ['light', 'dark', 'high-contrast', 'sepia', 'custom'];
+        const resolvedTheme = validThemes.includes(parsed.theme) ? parsed.theme : 'light';
+
         return {
           ...INITIAL_SETTINGS,
           ...parsed,
-          theme: parsed.theme === 'dark' ? 'dark' : 'light',
+          theme: resolvedTheme,
+          customThemeColors: parsed.customThemeColors || INITIAL_SETTINGS.customThemeColors,
           heightCm:
             typeof parsed.heightCm === 'number' && Number.isFinite(parsed.heightCm)
               ? parsed.heightCm
@@ -564,9 +571,10 @@ export default function App() {
 
   // Modals state
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [settingsInitialTab, setSettingsInitialTab] = useState<
-    'profile' | 'push' | 'language' | 'general' | 'security' | undefined
+    'profile' | 'themes' | 'push' | 'language' | 'general' | 'security' | undefined
   >(undefined);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
@@ -859,11 +867,7 @@ export default function App() {
       localStorage.setItem('settings-v2', JSON.stringify(settings));
     } catch {}
 
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    applyThemeToDocument(settings);
 
     if (settings.language) {
       document.documentElement.lang = settings.language;
@@ -1517,6 +1521,7 @@ export default function App() {
           setIsSettingsModalOpen(true);
         }}
         onOpenSubscription={() => setIsSubscriptionModalOpen(true)}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
         isOpenMobile={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
       />
@@ -1743,8 +1748,21 @@ export default function App() {
                 <span className="sm:hidden">4,99 €</span>
               </button>
             )}
-
-
+            {/* Quick Theme & Color Palette Selector Button */}
+            <button
+              type="button"
+              onClick={() => setIsThemeModalOpen(true)}
+              className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 transition-all shadow-2xs relative cursor-pointer"
+              title={`Temas y Colores (${settings.theme === 'custom' ? 'Personalizado' : settings.theme === 'high-contrast' ? 'Alto Contraste AAA' : settings.theme === 'dark' ? 'Oscuro' : settings.theme === 'sepia' ? 'Cálido' : 'Claro'})`}
+            >
+              <Palette className="w-4 h-4 text-amber-500 hover:rotate-12 transition-transform duration-300" />
+              {settings.theme === 'custom' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-1 right-1 animate-pulse" />
+              )}
+              {settings.theme === 'high-contrast' && (
+                <span className="w-2 h-2 rounded-full bg-yellow-400 absolute top-1 right-1" />
+              )}
+            </button>
 
             {/* User Settings Gear CTA */}
             <button
@@ -2395,6 +2413,14 @@ export default function App() {
           setCurrentCategory('all');
           setActiveView('welcome');
         }}
+      />
+
+      {/* Theme & Color Palette Selector Modal */}
+      <ThemeSelectorModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        settings={settings}
+        onUpdateSettings={handleUpdateSettings}
       />
 
       {/* Lifetime Premium Subscription & Ad Removal Modal */}

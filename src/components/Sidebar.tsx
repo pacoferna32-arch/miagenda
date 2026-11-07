@@ -27,6 +27,7 @@ import {
   Sparkles,
   Home,
   Inbox,
+  Palette,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { t } from '../utils/i18n';
@@ -51,6 +52,7 @@ interface SidebarProps {
   onOpenIOSModal: () => void;
   onOpenAuthModal: () => void;
   onOpenSettings?: () => void;
+  onOpenThemeModal?: () => void;
   onOpenSubscription?: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
@@ -74,6 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenIOSModal,
   onOpenAuthModal,
   onOpenSettings,
+  onOpenThemeModal,
   onOpenSubscription,
   isOpenMobile,
   onCloseMobile,
@@ -599,16 +602,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Sidebar Footer with Theme, Audio, Backup */}
         <div className="p-3 border-t border-white/10 space-y-2 bg-black/10">
-          <div className="flex items-center justify-between px-1">
-            {/* Theme Toggle */}
+          <div className="flex items-center justify-between px-1 gap-1">
+            {/* Theme Palette Modal Trigger */}
             <button
               type="button"
-              onClick={() => onUpdateSettings({ theme: isDarkMode ? 'light' : 'dark' })}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 transition-colors cursor-pointer"
-              title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              onClick={onOpenThemeModal}
+              className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/90 transition-colors cursor-pointer border border-white/5"
+              title="Selector de temas y paletas de color"
             >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-sky-300" />}
-              <span>{isDarkMode ? 'Claro' : 'Oscuro'}</span>
+              <Palette className="w-3.5 h-3.5 text-amber-400" />
+              <span>Temas</span>
+              {settings.theme === 'high-contrast' && (
+                <span className="text-[9px] bg-yellow-400 text-black px-1 rounded font-bold">AAA</span>
+              )}
+              {settings.theme === 'custom' && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              )}
             </button>
 
             {/* Sound Toggle */}

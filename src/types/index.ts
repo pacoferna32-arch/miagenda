@@ -125,8 +125,19 @@ export interface PremiumSubscription {
   paypalOrderId?: string;
 }
 
+export type ThemeMode = 'light' | 'dark' | 'high-contrast' | 'sepia' | 'custom';
+
+export interface CustomThemeColors {
+  bg: string;
+  text: string;
+  interactive: string;
+  surface?: string;
+  border?: string;
+}
+
 export interface UserSettings {
-  theme: 'light' | 'dark';
+  theme: ThemeMode;
+  customThemeColors?: CustomThemeColors;
   heightCm: number;
   targetWeightKg: number;
   enableSound: boolean;
