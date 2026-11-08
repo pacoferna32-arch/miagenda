@@ -29,8 +29,6 @@ import { WelcomeView } from './components/WelcomeView';
 import { UndatedTasksView } from './components/UndatedTasksView';
 import { TaskModal } from './components/TaskModal';
 import { ToastAlarms } from './components/ToastAlarms';
-import { AndroidInstallModal } from './components/AndroidInstallModal';
-import { IOSInstallModal } from './components/IOSInstallModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { AuthModal } from './components/AuthModal';
 import { TabNotesSection } from './components/TabNotesSection';
@@ -42,7 +40,6 @@ import { applyThemeToDocument } from './utils/theme';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdBanner } from './components/AdBanner';
 import { WeatherWidget, WeatherWeekBanner } from './components/WeatherWidget';
-import { usePWAInstall } from './hooks/usePWAInstall';
 import { useAuth } from './context/AuthContext';
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from './utils/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -579,8 +576,6 @@ export default function App() {
     'profile' | 'themes' | 'push' | 'language' | 'general' | 'security' | undefined
   >(undefined);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
-  const [isAndroidModalOpen, setIsAndroidModalOpen] = useState(false);
-  const [isIOSModalOpen, setIsIOSModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authRequiredPrompt, setAuthRequiredPrompt] = useState<string | undefined>(undefined);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -595,7 +590,6 @@ export default function App() {
   const [journalInitialDate, setJournalInitialDate] = useState<string | null>(null);
   const [pendingJournalDate, setPendingJournalDate] = useState<string | null>(null);
 
-  const { isInstalled } = usePWAInstall();
   const { user, loading: authLoading, logout } = useAuth();
   const currentLang = settings.language || 'es';
   const isPremium = !!settings.premium?.isPremium;
@@ -2359,18 +2353,6 @@ export default function App() {
           setAuthRequiredPrompt('Debes registrarte o iniciar sesión con Google, Apple o tu correo para guardar tareas y sincronizarlas.');
           setIsAuthModalOpen(true);
         }}
-      />
-
-      {/* Android APK / WebAPK Installation Dialog */}
-      <AndroidInstallModal
-        isOpen={isAndroidModalOpen}
-        onClose={() => setIsAndroidModalOpen(false)}
-      />
-
-      {/* iOS Safari Installation Dialog */}
-      <IOSInstallModal
-        isOpen={isIOSModalOpen}
-        onClose={() => setIsIOSModalOpen(false)}
       />
 
       {/* User Authentication & Cloud Sync Modal */}
