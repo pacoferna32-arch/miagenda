@@ -82,11 +82,12 @@ export const MonthView: React.FC<MonthViewProps> = ({
           {DIAS_SEMANA.map((dia, idx) => (
             <div
               key={dia}
-              className={`py-2.5 text-center text-[11px] font-bold uppercase tracking-wider ${
+              className={`py-2 text-center text-[10px] sm:text-[11px] font-bold uppercase tracking-wider ${
                 idx >= 5 ? 'text-[#e8533a] opacity-80' : 'text-neutral-500 dark:text-neutral-400'
               }`}
             >
-              {dia}
+              <span className="sm:hidden">{dia.charAt(0)}</span>
+              <span className="hidden sm:inline">{dia}</span>
             </div>
           ))}
         </div>
@@ -101,7 +102,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
               return (
                 <div
                   key={i}
-                  className="min-h-[105px] p-1.5 bg-[#faf8f5]/40 dark:bg-[#0f111a]/40 text-neutral-300 dark:text-neutral-700 pointer-events-none"
+                  className="calendar-cell-compact min-h-[64px] sm:min-h-[105px] p-1 sm:p-1.5 bg-[#faf8f5]/40 dark:bg-[#0f111a]/40 text-neutral-300 dark:text-neutral-700 pointer-events-none"
                 />
               );
             }
@@ -121,7 +122,7 @@ export const MonthView: React.FC<MonthViewProps> = ({
               <div
                 key={i}
                 onClick={() => onAddTaskForDate(dateStr)}
-                className={`min-h-[110px] sm:min-h-[115px] p-1.5 sm:p-2 flex flex-col group cursor-pointer transition-all duration-200 relative ${
+                className={`calendar-cell-compact min-h-[64px] sm:min-h-[110px] p-1 sm:p-2 flex flex-col group cursor-pointer transition-all duration-200 relative ${
                   isToday
                     ? 'bg-[#fdfaf7] dark:bg-[#1b1c2b]'
                     : hasTasks
@@ -207,8 +208,27 @@ export const MonthView: React.FC<MonthViewProps> = ({
                   </button>
                 </div>
 
-                {/* Task Chips & Journal Badge */}
-                <div className="space-y-1 group-hover:space-y-1.5 flex-1 overflow-hidden group-hover:overflow-visible transition-all duration-200">
+                {/* Mobile Tasks Indicator (Dots) */}
+                {hasTasks && (
+                  <div className="mobile-dots-container flex sm:hidden items-center justify-center gap-1 mt-0.5 flex-wrap">
+                    {dayJournal && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                    )}
+                    {dayTasks.slice(0, 3).map((t) => (
+                      <span
+                        key={t.id}
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: CATEGORY_MAP[t.c]?.c || '#e8533a' }}
+                      />
+                    ))}
+                    {dayTasks.length > 3 && (
+                      <span className="text-[9px] font-bold text-neutral-400">+{dayTasks.length - 3}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Desktop Task Chips & Journal Badge */}
+                <div className="desktop-task-chips hidden sm:block space-y-1 group-hover:space-y-1.5 flex-1 overflow-hidden group-hover:overflow-visible transition-all duration-200">
                   {/* Journal Entry Prominent Badge */}
                   {dayJournal && (
                     <div

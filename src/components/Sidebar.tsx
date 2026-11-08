@@ -52,8 +52,6 @@ interface SidebarProps {
   onExportBackup: () => void;
   onImportBackup: (jsonStr: string) => void;
   onResetData: () => void;
-  onOpenAndroidModal: () => void;
-  onOpenIOSModal: () => void;
   onOpenAuthModal: () => void;
   onOpenSettings?: () => void;
   onOpenThemeModal?: () => void;
@@ -79,8 +77,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onExportBackup,
   onImportBackup,
   onResetData,
-  onOpenAndroidModal,
-  onOpenIOSModal,
   onOpenAuthModal,
   onOpenSettings,
   onOpenThemeModal,
@@ -538,38 +534,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 </button>
               )}
-
-
-
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenAndroidModal();
-                  onCloseMobile();
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors shadow-xs cursor-pointer"
-              >
-                <span className="text-sm">🤖</span>
-                <span className="flex-1 text-left">Descargar APK Android</span>
-                <span className="text-[10px] bg-emerald-500/30 text-emerald-200 px-1.5 py-0.5 rounded font-mono font-bold">
-                  4.2 MB
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenIOSModal();
-                  onCloseMobile();
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold bg-sky-600/20 text-sky-300 border border-sky-500/30 hover:bg-sky-600/30 transition-colors shadow-xs cursor-pointer"
-              >
-                <span className="text-sm">🍏</span>
-                <span className="flex-1 text-left">Instalar en iOS / iPhone</span>
-                <span className="text-[10px] bg-sky-500/30 text-sky-200 px-1.5 py-0.5 rounded font-mono">
-                  Safari
-                </span>
-              </button>
             </div>
           </div>
 

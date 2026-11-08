@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CategoryKey, Task } from '../types';
 import { CATEGORIES } from '../utils/constants';
 import { sounds } from '../utils/audio';
@@ -33,7 +33,24 @@ export const RightCategoryBar: React.FC<RightCategoryBarProps> = ({
   onCloseMobile,
   className = '',
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1280;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1280 && window.innerWidth >= 1024) {
+        setIsCollapsed(true);
+      } else if (window.innerWidth >= 1280) {
+        setIsCollapsed(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Filter tasks for current month or all active tasks
   const currentYearMonth = currentDate

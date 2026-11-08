@@ -1520,8 +1520,6 @@ export default function App() {
         onExportBackup={handleExportBackup}
         onImportBackup={handleImportBackup}
         onResetData={handleResetData}
-        onOpenAndroidModal={() => setIsAndroidModalOpen(true)}
-        onOpenIOSModal={() => setIsIOSModalOpen(true)}
         onOpenAuthModal={() => {
           setAuthRequiredPrompt(undefined);
           setIsAuthModalOpen(true);
@@ -1539,61 +1537,84 @@ export default function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Bar Header */}
-        <header className="px-4 sm:px-8 py-4 border-b border-neutral-200/90 dark:border-neutral-800 bg-white/80 dark:bg-[#151722]/80 backdrop-blur-md sticky top-0 z-20 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              className="md:hidden p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300"
-              title="Abrir menú"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+        <header className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-neutral-200/90 dark:border-neutral-800 bg-white/80 dark:bg-[#151722]/80 backdrop-blur-md sticky top-0 z-20 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center justify-between gap-3 w-full lg:w-auto">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(true)}
+                className="md:hidden p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 shrink-0"
+                title="Abrir menú"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
 
-            <div>
-              <h1 className="text-xl sm:text-2xl font-serif font-bold text-neutral-900 dark:text-neutral-100 leading-tight">
-                {currentCategory === 'all'
-                  ? activeView === 'welcome'
-                    ? 'Inicio & Bienvenida'
-                    : activeView === 'journal'
-                    ? t('header.journalTitle', currentLang)
-                    : activeView === 'habits'
-                    ? t('header.habitsTitle', currentLang)
-                    : activeView === 'menus'
-                    ? 'Menús Semanales'
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-serif font-bold text-neutral-900 dark:text-neutral-100 leading-tight truncate">
+                  {currentCategory === 'all'
+                    ? activeView === 'welcome'
+                      ? 'Inicio & Bienvenida'
+                      : activeView === 'journal'
+                      ? t('header.journalTitle', currentLang)
+                      : activeView === 'habits'
+                      ? t('header.habitsTitle', currentLang)
+                      : activeView === 'menus'
+                      ? 'Menús Semanales'
+                      : activeView === 'undated'
+                      ? 'Tareas Sin Fecha'
+                      : activeView === 'day'
+                      ? t('header.dayTitle', currentLang)
+                      : activeView === 'week'
+                      ? t('header.weekTitle', currentLang)
+                      : activeView === 'shopping'
+                      ? t('header.shoppingTitle', currentLang)
+                      : activeView === 'medication'
+                      ? t('header.medicationTitle', currentLang)
+                      : activeView === 'weight'
+                      ? t('header.weightTitle', currentLang)
+                      : activeView === 'finanzas'
+                      ? t('header.financeTitle', currentLang)
+                      : t('header.allTasksTitle', currentLang)
+                    : `${CATEGORY_MAP[currentCategory]?.e || '📌'} ${getCategoryLocalizedName(currentCategory, currentLang)}`}
+                </h1>
+                <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                  {activeView === 'welcome'
+                    ? `Hola de nuevo, ${settings.userName || 'Paco'} · Inspiración diaria y tareas`
                     : activeView === 'undated'
-                    ? 'Tareas Sin Fecha'
+                    ? 'Bandeja de entrada y tareas pendientes para realizar sin fecha fija en el calendario'
                     : activeView === 'day'
-                    ? t('header.dayTitle', currentLang)
-                    : activeView === 'week'
-                    ? t('header.weekTitle', currentLang)
-                    : activeView === 'shopping'
-                    ? t('header.shoppingTitle', currentLang)
-                    : activeView === 'medication'
-                    ? t('header.medicationTitle', currentLang)
-                    : activeView === 'weight'
-                    ? t('header.weightTitle', currentLang)
-                    : activeView === 'finanzas'
-                    ? t('header.financeTitle', currentLang)
-                    : t('header.allTasksTitle', currentLang)
-                  : `${CATEGORY_MAP[currentCategory]?.e || '📌'} ${getCategoryLocalizedName(currentCategory, currentLang)}`}
-              </h1>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                {activeView === 'welcome'
-                  ? `Hola de nuevo, ${settings.userName || 'Paco'} · Inspiración diaria y tareas`
-                  : activeView === 'undated'
-                  ? 'Bandeja de entrada y tareas pendientes para realizar sin fecha fija en el calendario'
-                  : activeView === 'day'
-                  ? `${getLocalizedDayName((currentDayDate.getDay() + 6) % 7, true, currentLang)}, ${currentDayDate.getDate()} de ${getLocalizedMonthName(currentDayDate.getMonth(), currentLang)} ${currentDayDate.getFullYear()}`
-                  : `${getLocalizedMonthName(currentDate.getMonth(), currentLang)} ${currentDate.getFullYear()} · ${t('header.subtitle', currentLang)}`}
-              </p>
+                    ? `${getLocalizedDayName((currentDayDate.getDay() + 6) % 7, true, currentLang)}, ${currentDayDate.getDate()} de ${getLocalizedMonthName(currentDayDate.getMonth(), currentLang)} ${currentDayDate.getFullYear()}`
+                    : `${getLocalizedMonthName(currentDate.getMonth(), currentLang)} ${currentDate.getFullYear()} · ${t('header.subtitle', currentLang)}`}
+                </p>
+              </div>
+            </div>
+
+            {/* Mobile / Tablet Quick CTA cluster */}
+            <div className="flex items-center gap-1.5 lg:hidden shrink-0">
+              <button
+                type="button"
+                onClick={() => handleOpenNewTask()}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
+                title={t('header.newTask', currentLang)}
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span className="hidden sm:inline">{t('header.newTask', currentLang)}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileRightBarOpen(true)}
+                className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold shadow-2xs cursor-pointer"
+                title="Abrir pestañas por categoría"
+              >
+                <Layers className="w-4 h-4 text-[#e8533a]" />
+              </button>
             </div>
           </div>
 
-          {/* Right Zone: View switchers & CTA buttons */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Right Zone / Bottom row on mobile: View switchers & CTA buttons with horizontal scroll on small devices */}
+          <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar w-full lg:w-auto pb-1 lg:pb-0 shrink-0">
             {/* Calendar mode switcher buttons: Día, Semana, Mes, Lista, Sin Fecha */}
-            <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800/90 rounded-xl">
+            <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800/90 rounded-xl shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveView('day')}
@@ -1670,34 +1691,6 @@ export default function App() {
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>Sincronizado en tiempo real</span>
             </button>
-
-            {/* Install in Android CTA */}
-            {!isInstalled && (
-              <button
-                type="button"
-                onClick={() => setIsAndroidModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-semibold transition-all shrink-0 cursor-pointer"
-                title="Instalar como app nativa en Android (APK / Capacitor)"
-              >
-                <span>🤖</span>
-                <span className="hidden sm:inline">Descargar APK Android</span>
-                <span className="sm:hidden">Descargar APK</span>
-              </button>
-            )}
-
-            {/* Install in iOS (iPhone / iPad) CTA */}
-            {!isInstalled && (
-              <button
-                type="button"
-                onClick={() => setIsIOSModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-600/10 hover:bg-sky-600/20 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800 text-xs font-semibold transition-all shrink-0 cursor-pointer"
-                title="Instrucciones para instalar en iOS (iPhone / iPad)"
-              >
-                <span>🍏</span>
-                <span className="hidden sm:inline">Instalar en iOS</span>
-                <span className="sm:hidden">iOS</span>
-              </button>
-            )}
 
             {/* Quick Access to Tab Notes & Files */}
             {currentCategory !== 'diario' && activeView !== 'journal' && (
@@ -1790,25 +1783,14 @@ export default function App() {
               )}
             </button>
 
-            {/* Primary Action Button */}
+            {/* Primary Action Button (desktop) */}
             <button
               type="button"
               onClick={() => handleOpenNewTask()}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>{t('header.newTask', currentLang)}</span>
-            </button>
-
-            {/* Mobile / Tablet Button to open Right Category Tabs Drawer */}
-            <button
-              type="button"
-              onClick={() => setMobileRightBarOpen(true)}
-              className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold shadow-2xs cursor-pointer shrink-0"
-              title="Abrir pestañas por categoría"
-            >
-              <Layers className="w-4 h-4 text-[#e8533a]" />
-              <span className="hidden sm:inline">Pestañas</span>
             </button>
 
             {/* Authenticated User Pill */}
@@ -1858,7 +1840,7 @@ export default function App() {
         </header>
 
         {/* Scrollable Main Body */}
-        <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl w-full mx-auto">
           {/* Ad banner (free tier only, disappears completely when user unlocks lifetime premium) */}
           <AdBanner
             isPremium={isPremium}
@@ -1868,8 +1850,8 @@ export default function App() {
           {(activeView === 'month' || activeView === 'list' || activeView === 'menus') && (
             <>
               {/* Stats Bar (KPI counters) */}
-              <section className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-4 rounded-2xl bg-white dark:bg-[#151722] border border-neutral-200/80 dark:border-neutral-800 shadow-xs flex flex-col justify-between">
+              <section className="responsive-kpi-grid grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#151722] border border-neutral-200/80 dark:border-neutral-800 shadow-xs flex flex-col justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                     Este mes
                   </span>
@@ -1971,7 +1953,6 @@ export default function App() {
               }}
               onToggleTaskDone={handleToggleTask}
               onOpenNewTaskModal={(dStr) => handleOpenNewTask(dStr)}
-              onOpenAndroidModal={() => setIsAndroidModalOpen(true)}
             />
           )}
 

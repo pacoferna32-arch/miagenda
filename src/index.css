@@ -89,3 +89,147 @@ html.theme-custom .btn-primary-action {
   background-color: var(--app-interactive) !important;
   color: var(--app-interactive-text) !important;
 }
+
+/* ==========================================================================
+   RESPONSIVE LAYOUT & MEDIA QUERIES (CSS Flexbox & Grid Techniques)
+   ========================================================================== */
+
+/* Utility to hide scrollbars while preserving touch/wheel scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Fluid responsive typography */
+.fluid-heading {
+  font-size: clamp(1.25rem, 2.5vw + 0.5rem, 1.875rem);
+  line-height: 1.2;
+}
+
+.fluid-subheading {
+  font-size: clamp(0.75rem, 1vw + 0.5rem, 0.875rem);
+}
+
+/* Mobile Safe Areas for Notch and Navigation bar */
+.safe-area-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+.safe-area-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
+}
+
+/* Responsive Adaptive CSS Grid for KPI Stats & Cards */
+.responsive-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* 7-column Responsive Calendar Grid with Equal Proportions */
+.calendar-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Media Queries: Mobile Viewports (max-width: 640px)
+   -------------------------------------------------------------------------- */
+@media screen and (max-width: 640px) {
+  /* Ensure touch targets meet 44px accessibility recommendation */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Compact calendar cells on small phone screens to prevent runaway vertical scroll */
+  .calendar-cell-compact {
+    min-height: 68px !important;
+    padding: 0.25rem !important;
+  }
+
+  /* Stacked modals adapt into bottom sheets on mobile */
+  .responsive-dialog-container {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+
+  .responsive-dialog-surface {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    max-height: 92vh !important;
+    width: 100% !important;
+  }
+
+  /* Compact text sizing in small cells */
+  .calendar-cell-compact .cell-day-number {
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 0.6875rem;
+  }
+
+  /* Dense task indicator for mobile */
+  .calendar-cell-compact .mobile-dots-container {
+    display: flex !important;
+  }
+
+  .calendar-cell-compact .desktop-task-chips {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Media Queries: Tablet Viewports (641px <= width <= 1024px)
+   -------------------------------------------------------------------------- */
+@media screen and (min-width: 641px) and (max-width: 1024px) {
+  .calendar-cell-compact {
+    min-height: 95px !important;
+    padding: 0.375rem !important;
+  }
+
+  .calendar-cell-compact .mobile-dots-container {
+    display: none !important;
+  }
+
+  .calendar-cell-compact .desktop-task-chips {
+    display: flex !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Media Queries: Desktop Viewports (min-width: 1025px)
+   -------------------------------------------------------------------------- */
+@media screen and (min-width: 1025px) {
+  .calendar-cell-compact {
+    min-height: 115px !important;
+  }
+
+  .calendar-cell-compact .mobile-dots-container {
+    display: none !important;
+  }
+
+  .calendar-cell-compact .desktop-task-chips {
+    display: flex !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   High-Resolution / Retina & Dark Mode Media Query overrides
+   -------------------------------------------------------------------------- */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .crisp-border {
+    border-width: 0.5px;
+  }
+}
+
