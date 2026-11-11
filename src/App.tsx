@@ -36,6 +36,8 @@ import { DiaryPinModal } from './components/DiaryPinModal';
 import { UserSettingsModal } from './components/UserSettingsModal';
 import { ThemeSelectorModal } from './components/ThemeSelectorModal';
 import { RightCategoryBar } from './components/RightCategoryBar';
+import { QuickSearchModal } from './components/QuickSearchModal';
+import confetti from 'canvas-confetti';
 import { applyThemeToDocument } from './utils/theme';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdBanner } from './components/AdBanner';
@@ -66,6 +68,7 @@ import {
   Inbox,
   Palette,
   Layers,
+  Search,
 } from 'lucide-react';
 
 const INITIAL_TASKS_BY_ID = new Map<number, Task>(INITIAL_TASKS.map((item) => [item.id, item]));
@@ -582,6 +585,7 @@ export default function App() {
   const [modalDefaultDate, setModalDefaultDate] = useState<string | undefined>(undefined);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileRightBarOpen, setMobileRightBarOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // 4-Digit Security PIN state for Diario Personal
   const [isDiaryUnlocked, setIsDiaryUnlocked] = useState(false);
@@ -879,6 +883,48 @@ export default function App() {
 
   const [deletedTaskToast, setDeletedTaskToast] = useState<Task | null>(null);
 
+  // Global interactive keyboard shortcuts (Ctrl+K for search, N for new task, 1-5 for views)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable);
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+
+      if (!isInput) {
+        if (e.key.toLowerCase() === 'n') {
+          e.preventDefault();
+          handleOpenNewTask();
+        } else if (e.key === '1') {
+          setActiveView('day');
+        } else if (e.key === '2') {
+          setActiveView('week');
+        } else if (e.key === '3') {
+          setActiveView('month');
+        } else if (e.key === '4') {
+          setActiveView('list');
+        } else if (e.key === '5') {
+          setActiveView('undated');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // Task Handlers
   const handleToggleTask = async (id: number) => {
     const target = tasks.find((tItem) => tItem.id === id);
@@ -887,6 +933,14 @@ export default function App() {
     const nextDone = !target.done;
     if (nextDone) {
       sounds.playCompleteChime();
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.65 },
+          colors: ['#e8533a', '#10b981', '#f59e0b', '#3b82f6', '#ec4899'],
+        });
+      } catch {}
     }
 
     const updatedTask: Task = { ...target, done: nextDone };
@@ -910,6 +964,17 @@ export default function App() {
 
   const handleSaveTask = async (taskData: Omit<Task, 'id' | 'done'>, editId?: number) => {
     requestNotificationPermission();
+
+    if (!editId) {
+      try {
+        confetti({
+          particleCount: 40,
+          spread: 50,
+          origin: { y: 0.6 },
+          colors: ['#e8533a', '#f59e0b', '#10b981'],
+        });
+      } catch {}
+    }
 
     let taskToSave: Task;
     if (editId) {
@@ -1587,6 +1652,14 @@ export default function App() {
             <div className="flex items-center gap-1.5 lg:hidden shrink-0">
               <button
                 type="button"
+                onClick={() => setIsSearchOpen(true)}
+                className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold shadow-2xs cursor-pointer"
+                title="Buscar tareas (Ctrl+K)"
+              >
+                <Search className="w-4 h-4 text-[#e8533a]" />
+              </button>
+              <button
+                type="button"
                 onClick={() => handleOpenNewTask()}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
                 title={t('header.newTask', currentLang)}
@@ -1775,6 +1848,18 @@ export default function App() {
               {settings.pushNotifications?.enabled && (
                 <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-1 right-1" />
               )}
+            </button>
+
+            {/* Quick Interactive Search Button (Desktop) */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 text-xs font-semibold shadow-2xs transition-all shrink-0 cursor-pointer"
+              title="Búsqueda interactiva en tiempo real (Ctrl+K)"
+            >
+              <Search className="w-4 h-4 text-[#e8533a]" />
+              <span className="hidden md:inline">Buscar</span>
+              <kbd className="hidden lg:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-500">⌘K</kbd>
             </button>
 
             {/* Primary Action Button (desktop) */}
@@ -2439,6 +2524,18 @@ export default function App() {
         settings={settings}
         userEmail={user?.email || ''}
         onActivatePremium={handleActivatePremium}
+      />
+
+      {/* Interactive Quick Search Command Palette (Ctrl+K) */}
+      <QuickSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        tasks={safeTasks}
+        onSelectTask={(task) => {
+          setEditingTask(task);
+          setIsTaskModalOpen(true);
+        }}
+        onToggleTask={handleToggleTask}
       />
 
       {/* Deleted Task Undo Toast (v2.5.0) */}

@@ -17,6 +17,8 @@ import {
   Navigation as NavIcon,
   Search,
   Inbox,
+  Sparkles,
+  AlertCircle,
 } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
@@ -76,6 +78,36 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [location, setLocation] = useState('');
 
   const [activeTab, setActiveTab] = useState<'details' | 'drawing'>('details');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [isShaking, setIsShaking] = useState(false);
+
+  // Smart category suggestion via JavaScript pattern matching
+  const suggestedCategory = React.useMemo<CategoryKey | null>(() => {
+    const lower = title.toLowerCase().trim();
+    if (!lower || lower.length < 3) return null;
+    if (/(m[ée]dic|pastill|doctor|salud|hospital|an[áa]lisis|receta|vacun|consulta|dentist)/.test(lower)) {
+      return 'medicas';
+    }
+    if (/(compr|s[úu]per|mercadona|fruta|pan|leche|huevos|verdura|hiper|tienda)/.test(lower)) {
+      return 'compras';
+    }
+    if (/(desayun|almuerz|cenar|comid|meriend|plato|recet|cocin|postre|ensalada)/.test(lower)) {
+      return 'menus';
+    }
+    if (/(factur|pagar|pago|ingreso|gasto|banco|n[óo]mina|sueldo|transferenci|euros|alquiler)/.test(lower)) {
+      return 'finanzas';
+    }
+    if (/(gym|entren|ejercicio|pesas|correr|nadar|yoga|bici|caminar|fitness)/.test(lower)) {
+      return 'actividades';
+    }
+    if (/(reuni[óo]n|trabaj|oficin|cliente|proyecto|jefe|turno|guardia|informe|entreg)/.test(lower)) {
+      return 'trabajo';
+    }
+    if (/(amig|famili|pareja|cumple|fiesta|cine|quedada|caf[ée]|viaje|vacacion)/.test(lower)) {
+      return 'personales';
+    }
+    return null;
+  }, [title]);
 
   useEffect(() => {
     if (initialTask) {
@@ -174,9 +206,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       } else if (category === 'medicas') {
         finalTitle = medType === 'especialista' ? `Cita ${medSpecialty || 'Especialista'}` : 'Consulta Centro de Salud';
       } else {
-        finalTitle = 'Nueva tarea';
+        setFormError('Por favor escribe un título para tu tarea.');
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+        return;
       }
     }
+    setFormError(null);
 
     const parsedAmount = finAmount ? parseFloat(finAmount.replace(',', '.')) : null;
 
@@ -295,26 +331,105 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             </div>
           </div>
 
-          {/* Title input */}
-          <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
-              Título de la tarea
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={
-                category === 'menus'
-                  ? 'Ej: Salmón con verduras al horno'
-                  : category === 'finanzas'
-                  ? 'Ej: Pago de seguro o compra supermercado'
-                  : category === 'compras'
-                  ? 'Ej: Compra semanal'
-                  : 'Ej: Revisión médica, reunión o llamada importante'
-              }
-              className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50 text-sm"
-            />
+          {/* Title input & Smart Validation */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                Título de la tarea <span className="text-[#e8533a]">*</span>
+              </label>
+              <span
+                className={`text-[10px] font-mono transition-colors ${
+                  title.length === 0
+                    ? 'text-neutral-400'
+                    : title.length < 3
+                    ? 'text-rose-500 font-bold'
+                    : 'text-neutral-500'
+                }`}
+              >
+                {title.length} / 80 car.
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                value={title}
+                maxLength={80}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  if (formError) setFormError(null);
+                }}
+                placeholder={
+                  category === 'menus'
+                    ? 'Ej: Salmón con verduras al horno'
+                    : category === 'finanzas'
+                    ? 'Ej: Pago de seguro o compra supermercado'
+                    : category === 'compras'
+                    ? 'Ej: Compra semanal'
+                    : 'Ej: Revisión médica, reunión o llamada importante'
+                }
+                className={`w-full px-3.5 py-2.5 rounded-xl border bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 focus:outline-none text-sm transition-all ${
+                  isShaking ? 'animate-bounce border-rose-500 ring-2 ring-rose-500/30' : ''
+                } ${
+                  formError
+                    ? 'border-rose-400 ring-2 ring-rose-400/20'
+                    : 'border-neutral-200 dark:border-neutral-800 focus:ring-2 focus:ring-[#e8533a]/50'
+                }`}
+              />
+            </div>
+
+            {/* Title Strength Progress Bar */}
+            <div className="flex items-center gap-2 pt-0.5">
+              <div className="flex-1 h-1 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    title.length === 0
+                      ? 'w-0'
+                      : title.length < 3
+                      ? 'w-1/4 bg-rose-500'
+                      : title.length < 15
+                      ? 'w-2/3 bg-amber-500'
+                      : 'w-full bg-emerald-500'
+                  }`}
+                />
+              </div>
+              <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
+                {title.length === 0
+                  ? 'Requerido'
+                  : title.length < 3
+                  ? 'Muy breve'
+                  : title.length < 15
+                  ? 'Conciso'
+                  : 'Descriptivo ✓'}
+              </span>
+            </div>
+
+            {/* Error Message */}
+            {formError && (
+              <div className="flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-medium animate-in fade-in pt-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {/* Smart Category Auto-Detection Suggestion */}
+            {suggestedCategory && suggestedCategory !== category && (
+              <div className="flex items-center justify-between p-2 rounded-xl bg-amber-500/10 border border-amber-300 dark:border-amber-700/60 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in slide-in-from-top-1 transition-all">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0 animate-pulse" />
+                  <span className="truncate">
+                    Sugerencia: ¿Asignar a <b>{CATEGORY_MAP[suggestedCategory]?.e} {CATEGORY_MAP[suggestedCategory]?.n}</b>?
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCategory(suggestedCategory)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-[11px] shadow-2xs shrink-0 cursor-pointer active:scale-95 transition-all"
+                >
+                  Cambiar
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Date, Time & Priority Row */}
@@ -383,19 +498,46 @@ export const TaskModal: React.FC<TaskModalProps> = ({
                 </>
               )}
 
+              {/* Segmented Interactive Priority Selector */}
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1">
                   Prioridad
                 </label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-                  className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#faf8f5] dark:bg-[#12141f] text-neutral-900 dark:text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#e8533a]/50"
-                >
-                  <option value="normal">Normal</option>
-                  <option value="alta">Alta ⚠️</option>
-                  <option value="urgente">Urgente 🔥</option>
-                </select>
+                <div className="grid grid-cols-3 gap-1 bg-neutral-100 dark:bg-neutral-800/90 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setPriority('normal')}
+                    className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      priority === 'normal'
+                        ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
+                    }`}
+                  >
+                    Normal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPriority('alta')}
+                    className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      priority === 'alta'
+                        ? 'bg-amber-500 text-white shadow-xs font-bold'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-amber-600'
+                    }`}
+                  >
+                    Alta ⚠️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPriority('urgente')}
+                    className={`py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      priority === 'urgente'
+                        ? 'bg-rose-500 text-white shadow-xs font-bold'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-rose-600'
+                    }`}
+                  >
+                    Urgente 🔥
+                  </button>
+                </div>
               </div>
             </div>
           </div>
