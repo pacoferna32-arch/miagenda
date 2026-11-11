@@ -1,17 +1,25 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" class="scroll-smooth">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
     <title>Mi Calendario de Tareas</title>
-    <meta name="description" content="Organizador personal integral con calendario mensual y semanal, gestión de tareas, menús, lista de la compra, medicación diaria, control de peso, finanzas y notas manuscritas con Apple Pencil." />
+    <meta
+      name="description"
+      content="Organizador personal integral con calendario mensual y semanal, gestión de tareas, menús, lista de la compra, medicación diaria, control de peso, finanzas y notas manuscritas con Apple Pencil."
+    />
     <meta property="og:title" content="Mi Calendario de Tareas" />
-    <meta property="og:description" content="Organizador personal integral con calendario mensual y semanal, gestión de tareas, menús, lista de la compra, medicación diaria, control de peso, finanzas y notas manuscritas con Apple Pencil." />
+    <meta
+      property="og:description"
+      content="Organizador personal integral con calendario mensual y semanal, gestión de tareas, menús, lista de la compra, medicación diaria, control de peso, finanzas y notas manuscritas con Apple Pencil."
+    />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
 
     <!-- PWA & Mobile Web App Meta Tags -->
-    <meta name="theme-color" content="#e8533a" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf8f5" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f111a" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -24,11 +32,23 @@
     <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512x512.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
+    <!-- Performance: DNS Prefetch & Font Preloading -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body class="bg-[#faf8f5] dark:bg-[#0f111a] text-[#1a1c29] dark:text-[#f0f2f8] antialiased selection:bg-[#e8533a]/20 selection:text-[#e8533a]">
+    <noscript>
+      <div style="padding: 2rem; text-align: center; font-family: sans-serif; background: #faf8f5; color: #1a1c29;">
+        <h2>JavaScript requerido</h2>
+        <p>Por favor activa JavaScript en tu navegador para utilizar Mi Calendario de Tareas.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Task, Medication, WeightEntry, UserSettings, CategoryKey, JournalEntry, Habit, PremiumSubscription } from './types';
 import {
   INITIAL_TASKS,
@@ -14,6 +14,8 @@ import {
 } from './utils/constants';
 import { sounds } from './utils/audio';
 import { Sidebar } from './components/Sidebar';
+import { Header } from './components/Header';
+import { KpiStatsBar } from './components/KpiStatsBar';
 import { MonthView } from './components/MonthView';
 import { DayView } from './components/DayView';
 import { WeekCalendarView } from './components/WeekCalendarView';
@@ -38,37 +40,18 @@ import { ThemeSelectorModal } from './components/ThemeSelectorModal';
 import { RightCategoryBar } from './components/RightCategoryBar';
 import { QuickSearchModal } from './components/QuickSearchModal';
 import confetti from 'canvas-confetti';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { applyThemeToDocument } from './utils/theme';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { AdBanner } from './components/AdBanner';
-import { WeatherWidget, WeatherWeekBanner } from './components/WeatherWidget';
+import { WeatherWeekBanner } from './components/WeatherWidget';
 import { useAuth } from './context/AuthContext';
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from './utils/firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import {
-  t,
-  getCategoryLocalizedName,
-  getLocalizedMonthName,
-  getLocalizedDayName,
-} from './utils/i18n';
-import {
-  Menu,
   ChevronLeft,
   ChevronRight,
   Calendar,
-  CalendarDays,
-  Clock,
-  List,
-  Plus,
-  LogOut,
-  Settings,
-  Globe,
-  Crown,
-  Sparkles,
-  Inbox,
-  Palette,
-  Layers,
-  Search,
 } from 'lucide-react';
 
 const INITIAL_TASKS_BY_ID = new Map<number, Task>(INITIAL_TASKS.map((item) => [item.id, item]));
@@ -883,47 +866,13 @@ export default function App() {
 
   const [deletedTaskToast, setDeletedTaskToast] = useState<Task | null>(null);
 
-  // Global interactive keyboard shortcuts (Ctrl+K for search, N for new task, 1-5 for views)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const isInput =
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable);
-
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setIsSearchOpen((prev) => !prev);
-        return;
-      }
-
-      if (e.key === 'Escape') {
-        setIsSearchOpen(false);
-      }
-
-      if (!isInput) {
-        if (e.key.toLowerCase() === 'n') {
-          e.preventDefault();
-          handleOpenNewTask();
-        } else if (e.key === '1') {
-          setActiveView('day');
-        } else if (e.key === '2') {
-          setActiveView('week');
-        } else if (e.key === '3') {
-          setActiveView('month');
-        } else if (e.key === '4') {
-          setActiveView('list');
-        } else if (e.key === '5') {
-          setActiveView('undated');
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  // Global interactive keyboard shortcuts hook
+  useKeyboardShortcuts({
+    onToggleSearch: useCallback(() => setIsSearchOpen((prev) => !prev), []),
+    onCloseSearch: useCallback(() => setIsSearchOpen(false), []),
+    onNewTask: useCallback(() => handleOpenNewTask(), []),
+    onSelectView: useCallback((v) => setActiveView(v), []),
+  });
 
   // Task Handlers
   const handleToggleTask = async (id: number) => {
@@ -1487,24 +1436,40 @@ export default function App() {
     }
   };
 
-  // Safely filter tasks by active category
-  const safeTasks = tasks.filter(
-    (tItem): tItem is Task => Boolean(tItem && typeof tItem.d === 'string' && typeof tItem.t === 'string')
+  // Safely filter tasks by active category (memoized for performance)
+  const safeTasks = useMemo(
+    () => tasks.filter((tItem): tItem is Task => Boolean(tItem && typeof tItem.d === 'string' && typeof tItem.t === 'string')),
+    [tasks]
   );
 
-  const visibleTasks =
-    currentCategory === 'all' ? safeTasks : safeTasks.filter((tItem) => tItem.c === currentCategory);
-
-  // Month stats
-  const currentYearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-  const todayStr = toIsoDate(new Date());
-
-  const monthTasks = visibleTasks.filter(
-    (tItem) => typeof tItem.d === 'string' && tItem.d.startsWith(currentYearMonth)
+  const visibleTasks = useMemo(
+    () => (currentCategory === 'all' ? safeTasks : safeTasks.filter((tItem) => tItem.c === currentCategory)),
+    [safeTasks, currentCategory]
   );
-  const doneMonthCount = monthTasks.filter((tItem) => tItem.done).length;
-  const pendingMonthCount = monthTasks.filter((tItem) => !tItem.done).length;
-  const todayPendingCount = visibleTasks.filter((tItem) => tItem.d === todayStr && !tItem.done).length;
+
+  // Month stats (memoized for optimal rendering performance)
+  const currentYearMonth = useMemo(
+    () => `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+    [currentDate]
+  );
+  const todayStr = useMemo(() => toIsoDate(new Date()), []);
+
+  const monthTasks = useMemo(
+    () => visibleTasks.filter((tItem) => typeof tItem.d === 'string' && tItem.d.startsWith(currentYearMonth)),
+    [visibleTasks, currentYearMonth]
+  );
+  const doneMonthCount = useMemo(
+    () => monthTasks.filter((tItem) => tItem.done).length,
+    [monthTasks]
+  );
+  const pendingMonthCount = useMemo(
+    () => monthTasks.filter((tItem) => !tItem.done).length,
+    [monthTasks]
+  );
+  const todayPendingCount = useMemo(
+    () => visibleTasks.filter((tItem) => tItem.d === todayStr && !tItem.done).length,
+    [visibleTasks, todayStr]
+  );
 
   if (authLoading) {
     return (
@@ -1595,328 +1560,32 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Bar Header */}
-        <header className="px-3 sm:px-6 lg:px-8 py-3 sm:py-4 border-b border-neutral-200/90 dark:border-neutral-800 bg-white/80 dark:bg-[#151722]/80 backdrop-blur-md sticky top-0 z-20 flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center justify-between gap-3 w-full lg:w-auto">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={() => setMobileSidebarOpen(true)}
-                className="md:hidden p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 shrink-0"
-                title="Abrir menú"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-2xl font-serif font-bold text-neutral-900 dark:text-neutral-100 leading-tight truncate">
-                  {currentCategory === 'all'
-                    ? activeView === 'welcome'
-                      ? 'Inicio & Bienvenida'
-                      : activeView === 'journal'
-                      ? t('header.journalTitle', currentLang)
-                      : activeView === 'habits'
-                      ? t('header.habitsTitle', currentLang)
-                      : activeView === 'menus'
-                      ? 'Menús Semanales'
-                      : activeView === 'undated'
-                      ? 'Tareas Sin Fecha'
-                      : activeView === 'day'
-                      ? t('header.dayTitle', currentLang)
-                      : activeView === 'week'
-                      ? t('header.weekTitle', currentLang)
-                      : activeView === 'shopping'
-                      ? t('header.shoppingTitle', currentLang)
-                      : activeView === 'medication'
-                      ? t('header.medicationTitle', currentLang)
-                      : activeView === 'weight'
-                      ? t('header.weightTitle', currentLang)
-                      : activeView === 'finanzas'
-                      ? t('header.financeTitle', currentLang)
-                      : t('header.allTasksTitle', currentLang)
-                    : `${CATEGORY_MAP[currentCategory]?.e || '📌'} ${getCategoryLocalizedName(currentCategory, currentLang)}`}
-                </h1>
-                <p className="text-[11px] sm:text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                  {activeView === 'welcome'
-                    ? `Hola de nuevo, ${settings.userName || 'Paco'} · Inspiración diaria y tareas`
-                    : activeView === 'undated'
-                    ? 'Bandeja de entrada y tareas pendientes para realizar sin fecha fija en el calendario'
-                    : activeView === 'day'
-                    ? `${getLocalizedDayName((currentDayDate.getDay() + 6) % 7, true, currentLang)}, ${currentDayDate.getDate()} de ${getLocalizedMonthName(currentDayDate.getMonth(), currentLang)} ${currentDayDate.getFullYear()}`
-                    : `${getLocalizedMonthName(currentDate.getMonth(), currentLang)} ${currentDate.getFullYear()} · ${t('header.subtitle', currentLang)}`}
-                </p>
-              </div>
-            </div>
-
-            {/* Mobile / Tablet Quick CTA cluster */}
-            <div className="flex items-center gap-1.5 lg:hidden shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsSearchOpen(true)}
-                className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold shadow-2xs cursor-pointer"
-                title="Buscar tareas (Ctrl+K)"
-              >
-                <Search className="w-4 h-4 text-[#e8533a]" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOpenNewTask()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
-                title={t('header.newTask', currentLang)}
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="hidden sm:inline">{t('header.newTask', currentLang)}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMobileRightBarOpen(true)}
-                className="p-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-semibold shadow-2xs cursor-pointer"
-                title="Abrir pestañas por categoría"
-              >
-                <Layers className="w-4 h-4 text-[#e8533a]" />
-              </button>
-            </div>
-          </div>
-
-          {/* Right Zone / Bottom row on mobile: View switchers & CTA buttons with horizontal scroll on small devices */}
-          <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar w-full lg:w-auto pb-1 lg:pb-0 shrink-0">
-            {/* Calendar mode switcher buttons: Día, Semana, Mes, Lista, Sin Fecha */}
-            <div className="flex items-center p-1 bg-neutral-100 dark:bg-neutral-800/90 rounded-xl shrink-0">
-              <button
-                type="button"
-                onClick={() => setActiveView('day')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  activeView === 'day'
-                    ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="hidden sm:inline">{t('view.day', currentLang)}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveView('week')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  activeView === 'week'
-                    ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                <CalendarDays className="w-3.5 h-3.5 text-sky-500" />
-                <span className="hidden sm:inline">{t('view.week', currentLang)}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveView('month')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  activeView === 'month'
-                    ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                <span className="hidden sm:inline">{t('view.month', currentLang)}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveView('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  activeView === 'list'
-                    ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                <List className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t('view.list', currentLang)}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveView('undated')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  activeView === 'undated'
-                    ? 'bg-white dark:bg-[#161824] text-neutral-900 dark:text-white shadow-xs font-semibold'
-                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900'
-                }`}
-              >
-                <Inbox className="w-3.5 h-3.5 text-orange-500" />
-                <span className="hidden sm:inline">Sin Fecha</span>
-              </button>
-            </div>
-
-            {/* Live Sync Cross-Device Badge */}
-            <button
-              type="button"
-              onClick={() => setIsAuthModalOpen(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-medium hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 transition-colors shadow-2xs cursor-pointer"
-              title="Sincronización en la nube activa."
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Sincronizado en tiempo real</span>
-            </button>
-
-            {/* Quick Access to Tab Notes & Files */}
-            {currentCategory !== 'diario' && activeView !== 'journal' && (
-              <button
-                type="button"
-                onClick={() => {
-                  const el = document.getElementById('tab-notes-section');
-                  if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 text-xs font-semibold transition-all shrink-0 cursor-pointer"
-                title="Ir a las Notas y Archivos de esta pestaña"
-              >
-                <span>📂</span>
-                <span className="hidden sm:inline">Notas & Archivos</span>
-                <span className="sm:hidden">Notas</span>
-              </button>
-            )}
-
-            {/* Weather Pill Widget */}
-            <WeatherWidget />
-
-            {/* Quick Language Switcher Pill */}
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsInitialTab('language');
-                setIsSettingsModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
-              title={`${t('lang.title', currentLang)} (${currentLang.toUpperCase()})`}
-            >
-              <Globe className="w-3.5 h-3.5 text-[#e8533a]" />
-              <span className="text-xs uppercase font-mono">{currentLang}</span>
-            </button>
-
-            {/* Lifetime Subscription & Ad Removal CTA */}
-            {isPremium ? (
-              <button
-                type="button"
-                onClick={() => setIsSubscriptionModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 border border-amber-400/40 text-amber-700 dark:text-amber-300 text-xs font-bold hover:bg-amber-500/25 transition-colors shadow-2xs shrink-0 cursor-pointer"
-                title="Suscripción Premium Vitalicia Activa"
-              >
-                <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                <span className="hidden md:inline">Premium Vitalicio</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsSubscriptionModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white text-xs font-bold transition-all shadow-xs shrink-0 active:scale-95 cursor-pointer"
-                title="Pago único de 4,99 €: Desbloquea todas las opciones y elimina la publicidad para siempre con tarjeta o transferencia bancaria"
-              >
-                <Crown className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Quitar anuncios (4,99 €)</span>
-                <span className="sm:hidden">4,99 €</span>
-              </button>
-            )}
-            {/* Quick Theme & Color Palette Selector Button */}
-            <button
-              type="button"
-              onClick={() => setIsThemeModalOpen(true)}
-              className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 transition-all shadow-2xs relative cursor-pointer"
-              title={`Temas y Colores (${settings.theme === 'custom' ? 'Personalizado' : settings.theme === 'high-contrast' ? 'Alto Contraste AAA' : settings.theme === 'dark' ? 'Oscuro' : settings.theme === 'sepia' ? 'Cálido' : 'Claro'})`}
-            >
-              <Palette className="w-4 h-4 text-amber-500 hover:rotate-12 transition-transform duration-300" />
-              {settings.theme === 'custom' && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-1 right-1 animate-pulse" />
-              )}
-              {settings.theme === 'high-contrast' && (
-                <span className="w-2 h-2 rounded-full bg-yellow-400 absolute top-1 right-1" />
-              )}
-            </button>
-
-            {/* User Settings Gear CTA */}
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsInitialTab('push');
-                setIsSettingsModalOpen(true);
-              }}
-              className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 transition-all shadow-2xs relative cursor-pointer"
-              title={t('settings.title', currentLang)}
-            >
-              <Settings className="w-4 h-4 text-neutral-600 dark:text-neutral-300 hover:rotate-45 transition-transform duration-300" />
-              {settings.pushNotifications?.enabled && (
-                <span className="w-2 h-2 rounded-full bg-emerald-500 absolute top-1 right-1" />
-              )}
-            </button>
-
-            {/* Quick Interactive Search Button (Desktop) */}
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#161824] hover:bg-neutral-50 dark:hover:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 text-xs font-semibold shadow-2xs transition-all shrink-0 cursor-pointer"
-              title="Búsqueda interactiva en tiempo real (Ctrl+K)"
-            >
-              <Search className="w-4 h-4 text-[#e8533a]" />
-              <span className="hidden md:inline">Buscar</span>
-              <kbd className="hidden lg:inline-block text-[9px] font-mono px-1 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-500">⌘K</kbd>
-            </button>
-
-            {/* Primary Action Button (desktop) */}
-            <button
-              type="button"
-              onClick={() => handleOpenNewTask()}
-              className="hidden lg:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e8533a] hover:bg-[#d4432c] text-white text-xs font-semibold shadow-md active:scale-95 transition-all shrink-0 cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
-              <span>{t('header.newTask', currentLang)}</span>
-            </button>
-
-            {/* Authenticated User Pill */}
-            <div className="flex items-center gap-1.5 p-1 pl-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-[#161824] shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setIsAuthModalOpen(true)}
-                className="flex items-center gap-2 pr-2 hover:opacity-85 transition-opacity text-left cursor-pointer"
-                title="Ver mi cuenta y detalles de sincronización"
-              >
-                {user?.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || 'Usuario'}
-                    className="w-6 h-6 rounded-full object-cover shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-[#e8533a] to-amber-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                    {(user?.displayName || user?.email || 'U').charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="hidden sm:block leading-tight">
-                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 block max-w-[110px] truncate">
-                    {user?.displayName || (typeof user?.email === 'string' ? user.email.split('@')[0] : '') || 'Mi Cuenta'}
-                  </span>
-                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                    {user ? 'En línea' : 'Sesión local'}
-                  </span>
-                </div>
-              </button>
-              {user && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    sounds.playClick();
-                    void logout();
-                  }}
-                  className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shrink-0 cursor-pointer"
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        </header>
+        {/* Top Bar Header (Modular Component) */}
+        <Header
+          activeView={activeView}
+          onSelectView={setActiveView}
+          currentCategory={currentCategory}
+          currentDate={currentDate}
+          currentDayDate={currentDayDate}
+          settings={settings}
+          isPremium={isPremium}
+          user={user}
+          onLogout={logout}
+          onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+          onOpenMobileRightBar={() => setMobileRightBarOpen(true)}
+          onOpenNewTask={handleOpenNewTask}
+          onOpenSearch={() => setIsSearchOpen(true)}
+          onOpenAuthModal={() => {
+            setAuthRequiredPrompt(undefined);
+            setIsAuthModalOpen(true);
+          }}
+          onOpenSettingsModal={(tab) => {
+            if (tab) setSettingsInitialTab(tab);
+            setIsSettingsModalOpen(true);
+          }}
+          onOpenThemeModal={() => setIsThemeModalOpen(true)}
+          onOpenSubscriptionModal={() => setIsSubscriptionModalOpen(true)}
+        />
 
         {/* Scrollable Main Body */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 max-w-7xl w-full mx-auto">
@@ -1928,44 +1597,13 @@ export default function App() {
 
           {(activeView === 'month' || activeView === 'list' || activeView === 'menus') && (
             <>
-              {/* Stats Bar (KPI counters) */}
-              <section className="responsive-kpi-grid grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-                <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#151722] border border-neutral-200/80 dark:border-neutral-800 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
-                    Este mes
-                  </span>
-                  <b className="text-2xl font-serif font-bold text-neutral-900 dark:text-neutral-100 tabular-nums mt-1">
-                    {monthTasks.length}
-                  </b>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-white dark:bg-[#151722] border border-neutral-200/80 dark:border-neutral-800 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    Hechas
-                  </span>
-                  <b className="text-2xl font-serif font-bold text-emerald-600 dark:text-emerald-400 tabular-nums mt-1">
-                    {doneMonthCount}
-                  </b>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-white dark:bg-[#151722] border border-neutral-200/80 dark:border-neutral-800 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                    Pendientes
-                  </span>
-                  <b className="text-2xl font-serif font-bold text-amber-600 dark:text-amber-400 tabular-nums mt-1">
-                    {pendingMonthCount}
-                  </b>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-white dark:bg-[#151722] border border-neutral-200/80 dark:border-neutral-800 shadow-xs flex flex-col justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#e8533a]">
-                    Para hoy
-                  </span>
-                  <b className="text-2xl font-serif font-bold text-[#e8533a] tabular-nums mt-1">
-                    {todayPendingCount}
-                  </b>
-                </div>
-              </section>
+              {/* Stats Bar (Modular KPI Counters) */}
+              <KpiStatsBar
+                monthTotal={monthTasks.length}
+                monthDone={doneMonthCount}
+                monthPending={pendingMonthCount}
+                todayPending={todayPendingCount}
+              />
 
               {/* Daily Weather Viewer & Weekly Forecast Banner */}
               <WeatherWeekBanner />
